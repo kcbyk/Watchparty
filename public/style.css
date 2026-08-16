@@ -414,10 +414,37 @@ svg {
   justify-content: center;
   flex-shrink: 0;
 }
+.drawer-user-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.drawer-user-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--yt-text-primary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.drawer-user-status {
+  font-size: 12px;
+  color: var(--yt-text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
 .drawer-user-actions {
   display: flex;
   align-items: center;
   gap: 4px;
+  flex-shrink: 0;
+}
 }
 .user-call-btn {
   width: 36px;
