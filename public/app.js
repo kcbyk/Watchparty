@@ -71,6 +71,13 @@ function getAvatarColor(name) {
   return colors[Math.abs(hash) % colors.length];
 }
 
+function generateNewRoomCode() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let id = '';
+  for (let i = 0; i < 6; i++) id += chars[Math.floor(Math.random() * chars.length)];
+  return id;
+}
+
 // ─── Socket & Room Logic ───────────────────────────────────────────────────
 function initRoom() {
   const urlParams = new URLSearchParams(window.location.search);
@@ -90,17 +97,19 @@ function initRoom() {
   if (roomCodeDisplay) roomCodeDisplay.textContent = roomId;
 
   try {
-    socket = io({
-      transports: ['websocket', 'polling'],
-      reconnectionAttempts: 10,
-      timeout: 10000
-    });
+    if (typeof io === 'function') {
+      socket = io({
+        transports: ['websocket', 'polling'],
+        reconnectionAttempts: 10,
+        timeout: 10000
+      });
 
-    socket.on('connect', () => {
-      joinRoom(roomId, username);
-    });
+      socket.on('connect', () => {
+        joinRoom(roomId, username);
+      });
 
-    setupSocketEvents();
+      setupSocketEvents();
+    }
   } catch (err) {
     console.warn('[Socket Connection Warning]', err);
   }
@@ -121,14 +130,18 @@ function initRoom() {
 
 function joinRoom(rId, uName) {
   roomId = rId;
-  roomCodeDisplay.textContent = roomId;
-  socket.emit('join-room', { room: roomId, user: uName });
+  if (roomCodeDisplay) roomCodeDisplay.textContent = roomId;
+  if (socket && typeof socket.emit === 'function') {
+    socket.emit('join-room', { room: roomId, user: uName });
+  }
   
   // Update URL without reload
-  const newUrl = new URL(window.location);
-  newUrl.searchParams.set('room', roomId);
-  newUrl.searchParams.set('user', uName);
-  window.history.replaceState({}, '', newUrl);
+  try {
+    const newUrl = new URL(window.location);
+    newUrl.searchParams.set('room', roomId);
+    newUrl.searchParams.set('user', uName);
+    window.history.replaceState({}, '', newUrl);
+  } catch (e) {}
 }
 
 function setupSocketEvents() {
@@ -1656,10 +1669,20 @@ if (mobNavUsers) {
 
 // ─── Initialize ────────────────────────────────────────────────────────────
 function startApp() {
-  searchInput.value = '';
-  clearSearchBtn.classList.remove('visible');
-  initRoom();
-  fetchAndRenderFeed('trend popüler türkiye');
+  try {
+    if (searchInput) searchInput.value = '';
+    if (clearSearchBtn) clearSearchBtn.classList.remove('visible');
+    
+    // Always fetch and render feed first
+    fetchAndRenderFeed('trend popüler türkiye');
+
+    // Connect to room & socket
+    initRoom();
+  } catch (err) {
+    console.error('[startApp Error]', err);
+    // Fallback feed load
+    fetchAndRenderFeed('trend popüler türkiye');
+  }
 }
 
 if (document.readyState === 'loading') {
