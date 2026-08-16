@@ -91,46 +91,55 @@ function initRoom() {
     userAvatarBadge.style.backgroundColor = getAvatarColor(username);
   }
 
-  // Fallback initial room code so UI never gets stuck at "BAĞLANIYOR"
-  const defaultRoomCode = paramRoom ? paramRoom.toUpperCase() : generateNewRoomCode();
-  roomId = defaultRoomCode;
-  if (roomCodeDisplay) roomCodeDisplay.textContent = roomId;
-
   try {
-    if (typeof io === 'function') {
-      socket = io({
-        transports: ['websocket', 'polling'],
-        reconnectionAttempts: 10,
-        timeout: 10000
-      });
-
-      socket.on('connect', () => {
-        joinRoom(roomId, username);
-      });
-
-      setupSocketEvents();
+    if (typeof io !== 'function') {
+      console.warn('[Socket] io() not available');
+      return;
     }
-  } catch (err) {
-    console.warn('[Socket Connection Warning]', err);
-  }
 
-  // Update room code from server if no room in query
-  if (!paramRoom) {
-    fetch('/api/new-room')
-      .then(res => res.json())
-      .then(data => {
-        if (data && data.roomId && data.roomId !== roomId) {
-          roomId = data.roomId;
-          joinRoom(roomId, username);
-        }
-      })
-      .catch(() => {});
+    socket = io({
+      transports: ['websocket', 'polling'],
+      reconnectionAttempts: 10,
+      timeout: 15000
+    });
+
+    setupSocketEvents();
+
+    // When socket connects, get room from server then join
+    socket.on('connect', () => {
+      console.log('[Socket] Connected:', socket.id);
+      if (paramRoom) {
+        // Join existing room from URL
+        roomId = paramRoom.toUpperCase();
+        joinRoom(roomId, username);
+      } else {
+        // Get a fresh room ID from server
+        fetch('/api/new-room')
+          .then(res => res.json())
+          .then(data => {
+            roomId = (data && data.roomId) ? data.roomId : generateNewRoomCode();
+            joinRoom(roomId, username);
+          })
+          .catch(() => {
+            roomId = generateNewRoomCode();
+            joinRoom(roomId, username);
+          });
+      }
+    });
+
+    socket.on('connect_error', (err) => {
+      console.warn('[Socket] Connection error:', err.message);
+    });
+
+  } catch (err) {
+    console.warn('[Socket Init Error]', err);
   }
 }
 
 function joinRoom(rId, uName) {
   roomId = rId;
   if (roomCodeDisplay) roomCodeDisplay.textContent = roomId;
+  localStorage.setItem('yt_wp_user', uName);
   if (socket && typeof socket.emit === 'function') {
     socket.emit('join-room', { room: roomId, user: uName });
   }
@@ -444,9 +453,9 @@ function renderRelatedList(videos) {
     `;
 
     item.addEventListener('click', () => {
-      socket.emit('play-video-now', video);
       openWatchView(video);
       showToast('Oynatılıyor: ' + video.title);
+      if (socket && socket.connected) socket.emit('play-video-now', video);
     });
 
     relatedVideosList.appendChild(item);
@@ -496,14 +505,14 @@ function renderQueueInSidebar() {
     // Click on item to play immediately
     item.addEventListener('click', (e) => {
       if (e.target.closest('.watch-queue-remove-btn')) return;
-      socket.emit('skip');
+      if (socket && socket.connected) socket.emit('skip');
     });
 
     // Remove from queue
     const removeBtn = item.querySelector('.watch-queue-remove-btn');
     removeBtn.addEventListener('click', (e) => {
       e.stopPropagation();
-      socket.emit('remove-from-queue', index);
+      if (socket && socket.connected) socket.emit('remove-from-queue', index);
       showToast('Sıradan kaldırıldı');
     });
 
@@ -549,7 +558,7 @@ if (watchShareBtn) {
 if (watchAddQueueBtn) {
   watchAddQueueBtn.addEventListener('click', () => {
     if (currentPlayingVideo) {
-      socket.emit('add-to-queue', currentPlayingVideo);
+      if (socket && socket.connected) socket.emit('add-to-queue', currentPlayingVideo);
       showToast('Sıraya eklendi');
     }
   });
@@ -650,15 +659,21 @@ function createVideoCardElement(video, index) {
   const titleEl = card.querySelector('.video-title');
 
   function triggerPlay() {
-    socket.emit('play-video-now', video);
+    // Open the video locally regardless of socket state
     openWatchView(video);
     showToast('Oynatılıyor: ' + video.title);
+    // Sync with room if socket is connected
+    if (socket && socket.connected) {
+      socket.emit('play-video-now', video);
+    }
   }
 
   function triggerAddToQueue(e) {
     e.stopPropagation();
-    socket.emit('add-to-queue', video);
     showToast('Sıraya eklendi');
+    if (socket && socket.connected) {
+      socket.emit('add-to-queue', video);
+    }
   }
 
   playNowBtn.addEventListener('click', (e) => { e.stopPropagation(); triggerPlay(); });
@@ -739,7 +754,7 @@ window.onYouTubeIframeAPIReady = function() {
     events: {
       onReady: (event) => {
         playerReady = true;
-        socket.emit('request-sync');
+        if (socket && socket.connected) socket.emit('request-sync');
       },
       onStateChange: (event) => {
         if (isSyncing) return;
@@ -747,15 +762,15 @@ window.onYouTubeIframeAPIReady = function() {
         if (s === YT.PlayerState.PLAYING) {
           isPlaying = true;
           updatePlayIcon(true);
-          socket.emit('video-play', player.getCurrentTime());
+          if (socket && socket.connected) socket.emit('video-play', player.getCurrentTime());
         } else if (s === YT.PlayerState.PAUSED) {
           isPlaying = false;
           updatePlayIcon(false);
-          socket.emit('video-pause', player.getCurrentTime());
+          if (socket && socket.connected) socket.emit('video-pause', player.getCurrentTime());
         } else if (s === YT.PlayerState.ENDED) {
           isPlaying = false;
           updatePlayIcon(false);
-          socket.emit('video-ended');
+          if (socket && socket.connected) socket.emit('video-ended');
         }
       }
     }
@@ -1389,7 +1404,7 @@ function renderQueue() {
       <button style="color:var(--yt-text-secondary);" title="Kaldır">✕</button>
     `;
     row.querySelector('button').addEventListener('click', () => {
-      socket.emit('remove-from-queue', idx);
+      if (socket && socket.connected) socket.emit('remove-from-queue', idx);
     });
     queueItemsContainer.appendChild(row);
   });
@@ -1418,7 +1433,7 @@ chatForm.addEventListener('submit', (e) => {
   e.preventDefault();
   const txt = chatMsgInput.value.trim();
   if (txt) {
-    socket.emit('send-message', txt);
+    if (socket && socket.connected) socket.emit('send-message', txt);
     chatMsgInput.value = '';
   }
 });
@@ -1714,11 +1729,11 @@ window.addEventListener('keydown', (e) => {
       const state = player.getPlayerState();
       if (state === YT.PlayerState.PLAYING) {
         player.pauseVideo();
-        socket.emit('video-pause', player.getCurrentTime());
+        if (socket && socket.connected) socket.emit('video-pause', player.getCurrentTime());
         showToast('Duraklatıldı ⏸️');
       } else {
         player.playVideo();
-        socket.emit('video-play', player.getCurrentTime());
+        if (socket && socket.connected) socket.emit('video-play', player.getCurrentTime());
         showToast('Oynatılıyor ▶️');
       }
     } catch (_) {}
@@ -1731,7 +1746,7 @@ window.addEventListener('keydown', (e) => {
     try {
       const newTime = Math.min(player.getDuration() || 9999, player.getCurrentTime() + 5);
       player.seekTo(newTime, true);
-      socket.emit('video-seek', newTime);
+      if (socket && socket.connected) socket.emit('video-seek', newTime);
       showToast('+5 sn ⏩');
     } catch (_) {}
   }
@@ -1743,7 +1758,7 @@ window.addEventListener('keydown', (e) => {
     try {
       const newTime = Math.max(0, player.getCurrentTime() - 5);
       player.seekTo(newTime, true);
-      socket.emit('video-seek', newTime);
+      if (socket && socket.connected) socket.emit('video-seek', newTime);
       showToast('-5 sn ⏪');
     } catch (_) {}
   }
