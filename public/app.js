@@ -686,6 +686,10 @@ function appendVideosToGrid(videos) {
 function createVideoCardElement(video, index) {
   const card = document.createElement('div');
   card.className = 'video-card';
+  card.setAttribute('data-testid', `video-card-${index}`);
+  if (index === 0) {
+    card.id = 'first-video-card';
+  }
   
   const views = video.views || (Math.floor(Math.random() * 850 + 20) + ' B görüntüleme');
   const timeAgo = video.ago || ['3 gün önce', '1 hafta önce', '2 hafta önce', '1 ay önce', '3 ay önce', '1 yıl önce'][(index || 0) % 6];
@@ -696,7 +700,7 @@ function createVideoCardElement(video, index) {
     : initial;
 
   card.innerHTML = `
-    <div class="thumbnail-wrapper">
+    <div class="thumbnail-wrapper" ${index === 0 ? 'id="first-video-thumb"' : ''}>
       <img class="thumbnail-img" src="${escapeHtml(video.thumbnail)}" alt="${escapeHtml(video.title)}" loading="lazy">
       <span class="video-duration">${escapeHtml(video.duration)}</span>
     </div>
@@ -705,7 +709,7 @@ function createVideoCardElement(video, index) {
         ${avatarHtml}
       </div>
       <div class="meta-container">
-        <h3 class="video-title" title="${escapeHtml(video.title)}">${escapeHtml(video.title)}</h3>
+        <h3 class="video-title" ${index === 0 ? 'id="first-video-title"' : ''} title="${escapeHtml(video.title)}">${escapeHtml(video.title)}</h3>
         <div class="channel-name-wrapper">
           <span>${escapeHtml(video.author)}</span>
           <svg class="verified-icon" viewBox="0 0 24 24"><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zM9.8 17.3l-4.2-4.1L7 11.8l2.8 2.7L17 7.4l1.4 1.4-8.6 8.5z"></path></svg>
@@ -713,7 +717,7 @@ function createVideoCardElement(video, index) {
         <div class="video-stats">${views} • ${timeAgo}</div>
         
         <div class="card-button-row">
-          <button class="card-action-pill primary play-now-btn">İzle</button>
+          <button class="card-action-pill primary play-now-btn" ${index === 0 ? 'id="first-play-btn"' : ''}>İzle</button>
           <button class="card-action-pill add-queue-btn">+ Sıraya Ekle</button>
         </div>
       </div>
