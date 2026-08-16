@@ -1977,13 +1977,49 @@ svg {
   .yt-logo-svg text {
     font-size: 15px;
   }
+/* ─── Media Query for Tablets & Mobile Screens (<= 860px) ─────────────────── */
+@media (max-width: 860px) {
+  /* Header */
+  .yt-header {
+    height: 48px;
+    padding: 0 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  #sidebar-toggle-btn {
+    display: none;
+  }
+  .yt-logo-svg text {
+    font-size: 15px;
+  }
   .yt-country-code {
     display: none;
   }
 
+  /* Right Header - Hide room pills and create btn, only show search icon on far right */
+  .yt-header-right {
+    gap: 4px;
+  }
+  .room-status-pill {
+    display: none !important;
+  }
+  .create-btn {
+    display: none !important;
+  }
+  .user-avatar-btn {
+    display: none !important;
+  }
+  .notification-btn {
+    display: none !important;
+  }
+
   /* Search Bar Mobile Toggle */
   .mobile-search-trigger-btn {
-    display: flex;
+    display: flex !important;
+    width: 40px;
+    height: 40px;
+    color: var(--yt-text-primary);
   }
   .yt-header-center {
     display: none;
@@ -2016,24 +2052,6 @@ svg {
     display: none;
   }
 
-  /* Right Header */
-  .room-status-pill {
-    padding: 4px 8px;
-    font-size: 11px;
-  }
-  .create-btn span {
-    display: none;
-  }
-  .create-btn {
-    padding: 0 10px;
-    height: 32px;
-  }
-  .user-avatar-btn {
-    width: 28px;
-    height: 28px;
-    font-size: 12px;
-  }
-
   /* Sidebar Hidden on Mobile */
   .yt-sidebar {
     display: none !important;
@@ -2044,59 +2062,78 @@ svg {
     padding-top: 48px;
   }
   .main-content {
-    padding-bottom: 60px; /* Space for bottom nav */
+    padding: 0 0 60px 0 !important; /* Space for bottom nav */
+    height: auto !important;
+    min-height: calc(100vh - 48px);
   }
 
   /* Feed Grid */
   .video-chips-bar {
     top: 48px;
-    padding: 8px 12px;
+    padding: 6px 12px;
+    height: 44px;
   }
   .video-grid-scroll {
-    padding: 8px 12px 70px 12px;
+    padding: 44px 0 70px 0 !important; /* Exactly below chips bar */
   }
   .video-grid {
     grid-template-columns: 1fr;
-    gap: 24px;
+    gap: 16px;
+    padding: 8px 0;
   }
   .video-card {
-    margin: 0 -4px;
+    margin: 0;
+    border-radius: 0;
+  }
+  .video-card .card-details {
+    padding: 10px 12px 0 12px;
   }
   .thumbnail-wrapper {
-    border-radius: 8px;
+    border-radius: 0; /* Full-bleed edge to edge like official YouTube mobile */
   }
 
-  /* Watch Page (Cinema Mode on Mobile) */
+  /* Watch Page (Cinema Mode on Mobile - Zero gap) */
   .watch-view {
-    padding: 0 0 60px 0;
+    padding: 0 0 60px 0 !important;
+    margin: 0 !important;
   }
   .watch-layout {
     flex-direction: column;
     gap: 0;
-  }
-  .watch-main-stage {
+    margin: 0;
     padding: 0;
   }
+  .watch-main-stage {
+    padding: 0 !important;
+    margin: 0 !important;
+  }
   .watch-player-wrapper {
-    border-radius: 0;
-    margin: 0;
+    border-radius: 0 !important;
+    margin: 0 !important;
+    padding-top: 0 !important;
+    width: 100vw !important;
+    max-width: 100% !important;
+    aspect-ratio: 16 / 9 !important;
+    max-height: none !important;
     position: sticky;
     top: 48px;
     z-index: 100;
     background: #000000;
+    box-shadow: none !important;
   }
   .watch-details-container {
-    padding: 12px 16px;
+    padding: 12px 14px;
   }
   .watch-video-title {
-    font-size: 16px;
-    line-height: 22px;
+    font-size: 15px;
+    line-height: 20px;
+    font-weight: 600;
   }
   .watch-channel-row {
     flex-direction: column;
     align-items: flex-start;
-    gap: 12px;
-    margin-top: 10px;
+    gap: 10px;
+    margin-top: 8px;
   }
   .watch-channel-left {
     width: 100%;
@@ -2116,7 +2153,7 @@ svg {
   /* Watch Sidebar */
   .watch-sidebar-stage {
     width: 100%;
-    padding: 0 16px 40px 16px;
+    padding: 0 12px 40px 12px;
   }
 
   /* Drawers -> Bottom Sheet Popup on Mobile */
