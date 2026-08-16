@@ -662,41 +662,51 @@ function escapeHtml(str) {
 }
 
 // ─── Chips Filter Event ────────────────────────────────────────────────────
-chipsContainer.addEventListener('click', (e) => {
-  const chip = e.target.closest('.chip-item');
-  if (!chip) return;
+if (chipsContainer) {
+  chipsContainer.addEventListener('click', (e) => {
+    const chip = e.target.closest('.chip-item');
+    if (!chip) return;
 
-  document.querySelectorAll('.chip-item').forEach(c => c.classList.remove('active'));
-  chip.classList.add('active');
+    document.querySelectorAll('.chip-item').forEach(c => c.classList.remove('active'));
+    chip.classList.add('active');
 
-  const query = chip.getAttribute('data-q') || 'trend popüler türkiye';
-  openFeedView();
-  fetchAndRenderFeed(query);
-});
+    const query = chip.getAttribute('data-q') || 'trend popüler türkiye';
+    openFeedView();
+    fetchAndRenderFeed(query);
+  });
+}
 
-chipsNextBtn.addEventListener('click', () => {
-  chipsContainer.scrollBy({ left: 200, behavior: 'smooth' });
-});
+if (chipsNextBtn && chipsContainer) {
+  chipsNextBtn.addEventListener('click', () => {
+    chipsContainer.scrollBy({ left: 200, behavior: 'smooth' });
+  });
+}
 
 // ─── Search Bar Events ─────────────────────────────────────────────────────
-searchForm.addEventListener('submit', (e) => {
-  e.preventDefault();
-  const q = searchInput.value.trim();
-  if (q) {
-    openFeedView();
-    fetchAndRenderFeed(q);
-  }
-});
+if (searchForm) {
+  searchForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const q = (searchInput?.value || '').trim();
+    if (q) {
+      openFeedView();
+      fetchAndRenderFeed(q);
+    }
+  });
+}
 
-searchInput.addEventListener('input', () => {
-  clearSearchBtn.classList.toggle('visible', !!searchInput.value);
-});
+if (searchInput) {
+  searchInput.addEventListener('input', () => {
+    if (clearSearchBtn) clearSearchBtn.classList.toggle('visible', !!searchInput.value);
+  });
+}
 
-clearSearchBtn.addEventListener('click', () => {
-  searchInput.value = '';
-  clearSearchBtn.classList.remove('visible');
-  searchInput.focus();
-});
+if (clearSearchBtn) {
+  clearSearchBtn.addEventListener('click', () => {
+    if (searchInput) searchInput.value = '';
+    clearSearchBtn.classList.remove('visible');
+    if (searchInput) searchInput.focus();
+  });
+}
 
 // ─── YouTube IFrame API Setup ──────────────────────────────────────────────
 window.onYouTubeIframeAPIReady = function() {
