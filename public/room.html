@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>YouTube</title>
+  <link rel="icon" href="https://www.youtube.com/s/desktop/9d3de409/img/favicon.ico" type="image/x-icon">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="app-container">
+
+  <!-- ═══════════════════════════════════════════════════════════ HEADER -->
+  <header class="yt-header">
+    <div class="yt-header-left">
+      <button class="icon-button" id="sidebar-toggle-btn" title="Kılavuz">
+        <svg viewBox="0 0 24 24" width="24" height="24"><path d="M21 6H3V5h18v1zm0 5H3v1h18v-1zm0 6H3v1h18v-1z"></path></svg>
+      </button>
+      
+      <div class="yt-logo-btn" id="logo-btn" title="YouTube Ana Sayfası">
+        <svg class="yt-logo-svg" viewBox="0 0 90 20" preserveAspectRatio="xMidYMid meet">
+          <g>
+            <path d="M27.9727 3.12324C27.6435 1.89323 26.6768 0.926623 25.4468 0.597366C23.2197 2.24288e-07 14.285 0 14.285 0C14.285 0 5.35042 2.24288e-07 3.12323 0.597366C1.89323 0.926623 0.926623 1.89323 0.597366 3.12324C2.24288e-07 5.35042 0 10 0 10C0 10 2.24288e-07 14.6496 0.597366 16.8768C0.926623 18.1068 1.89323 19.0734 3.12323 19.4026C5.35042 20 14.285 20 14.285 20C14.285 20 23.2197 20 25.4468 19.4026C26.6768 19.0734 27.6435 18.1068 27.9727 16.8768C28.5701 14.6496 28.5701 10 28.5701 10C28.5701 10 28.5677 5.35042 27.9727 3.12324Z" fill="#FF0000"></path>
+            <path d="M11.4253 14.2854L18.8477 10.0004L11.4253 5.71533V14.2854Z" fill="white"></path>
+          </g>
+          <text x="32" y="16" fill="#FFFFFF" font-family="'Roboto', Arial, sans-serif" font-weight="700" font-size="16" letter-spacing="-0.5">YouTube</text>
+        </svg>
+        <span class="yt-country-code">TR</span>
+      </div>
+    </div>
+
+    <!-- Center Search Bar -->
+    <div class="yt-header-center">
+      <form class="search-box-form" id="search-form">
+        <div class="search-input-wrapper">
+          <input type="text" class="search-input" id="search-input" placeholder="Ara" value="" autocomplete="off">
+          <button type="button" class="clear-search-btn" id="clear-search-btn" title="Temizle">
+            <svg viewBox="0 0 24 24" width="20" height="20"><path d="M12.7 12l6.6 6.6-.7.7-6.6-6.6-6.6 6.6-.7-.7 6.6-6.6-6.6-6.6.7-.7 6.6 6.6 6.6-6.6.7.7-6.6 6.6z"></path></svg>
+          </button>
+        </div>
+        <button type="submit" class="search-submit-btn" title="Ara">
+          <svg viewBox="0 0 24 24" width="24" height="24"><path d="M20.87 20.17l-5.59-5.59C16.35 13.35 17 11.75 17 10c0-3.87-3.13-7-7-7s-7 3.13-7 7 3.13 7 7 7c1.75 0 3.35-.65 4.58-1.71l5.59 5.59.7-.71zM10 16c-3.31 0-6-2.69-6-6s2.69-6 6-6 6 2.69 6 6-2.69 6-6 6z"></path></svg>
+        </button>
+      </form>
+      <button class="voice-search-btn" title="Sesle arama yapın">
+        <svg viewBox="0 0 24 24" width="24" height="24"><path d="M12 3c-1.66 0-3 1.34-3 3v6c0 1.66 1.34 3 3 3s3-1.34 3-3V6c0-1.66-1.34-3-3-3zm5.3 6c-.4 0-.7.3-.7.7 0 2.6-2.1 4.6-4.6 4.6s-4.6-2.1-4.6-4.6c0-.4-.3-.7-.7-.7s-.7.3-.7.7c0 3.1 2.4 5.6 5.3 5.9V18h-2c-.4 0-.7.3-.7.7s.3.7.7.7h6c.4 0 .7-.3.7-.7s-.3-.7-.7-.7h-2v-2.4c3-.4 5.3-2.9 5.3-6 0-.4-.3-.7-.7-.7z"></path></svg>
+      </button>
+    </div>
+
+    <!-- Right Actions -->
+    <div class="yt-header-right">
+      <div class="room-status-pill" id="room-status-btn" title="Oda Detayları ve Katılma">
+        <span class="live-indicator"></span>
+        <span>Oda:</span>
+        <span class="room-code-txt" id="room-code-display">BAĞLANIYOR</span>
+      </div>
+
+      <button class="create-btn" id="create-action-btn">
+        <svg viewBox="0 0 24 24" width="20" height="20"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"></path></svg>
+        <span>Oluştur</span>
+      </button>
+
+      <button class="icon-button notification-btn" title="Bildirimler">
+        <svg viewBox="0 0 24 24" width="24" height="24"><path d="M10 20h4c0 1.1-.9 2-2 2s-2-.9-2-2zm10-2v1H4v-1l2-2v-6c0-3.1 2-5.6 5-6.3V3c0-.6.4-1 1-1s1 .4 1 1v.7c3 .7 5 3.2 5 6.3v6l2 2zm-3-8c0-2.8-2.2-5-5-5s-5 2.2-5 5v7h10v-7z"></path></svg>
+        <span class="notification-badge">9+</span>
+      </button>
+
+      <div class="user-avatar-btn" id="user-avatar-badge" title="Profil">K</div>
+    </div>
+  </header>
+
+  <!-- ═══════════════════════════════════════════════════════════ APP BODY -->
+  <div class="app-body">
+
+    <!-- Sidebar Navigation -->
+    <aside class="yt-sidebar" id="sidebar">
+      <div class="sidebar-nav-item active" title="Ana Sayfa" data-category="Tümü">
+        <svg viewBox="0 0 24 24" width="24" height="24"><path d="M4 21V10.08l8-6.96 8 6.96V21h-6v-6h-4v6H4z"></path></svg>
+        <span class="nav-title">Ana Sayfa</span>
+      </div>
+
+      <div class="sidebar-nav-item" id="users-sidebar-btn" title="Odada Bağlı Kişiler">
+        <div style="position: relative; display: flex; align-items: center; justify-content: center;">
+          <svg viewBox="0 0 24 24" width="24" height="24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"></path></svg>
+          <span class="sidebar-user-badge" id="sidebar-user-count">1</span>
+        </div>
+        <span class="nav-title">Odadakiler</span>
+      </div>
+
+      <div class="sidebar-nav-item" id="chat-sidebar-btn" title="Canlı Sohbet">
+        <svg viewBox="0 0 24 24" width="24" height="24"><path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 9h12v2H6V9zm8 5H6v-2h8v2zm4-6H6V6h12v2z"></path></svg>
+        <span class="nav-title">Sohbet</span>
+      </div>
+
+      <div class="sidebar-nav-item" id="call-sidebar-btn" title="Görüşme Ekranı">
+        <div style="position: relative; display: flex; align-items: center; justify-content: center;">
+          <svg viewBox="0 0 24 24" width="24" height="24"><path d="M20.01 15.38c-1.23 0-2.42-.2-3.53-.56-.35-.12-.74-.03-1.01.24l-1.57 1.97c-2.83-1.35-5.48-3.9-6.89-6.83l1.95-1.66c.27-.28.35-.67.24-1.02-.37-1.11-.56-2.3-.56-3.53 0-.54-.45-.99-.99-.99H4.19C3.65 3 3 3.24 3 3.99 3 13.28 10.73 21 20.01 21c.71 0 .99-.63.99-1.18v-3.45c0-.54-.45-.99-.99-.99z"></path></svg>
+          <span class="sidebar-call-dot" id="sidebar-call-dot"></span>
+        </div>
+        <span class="nav-title">Görüşme</span>
+      </div>
+    </aside>
+
+    <!-- Main Feed / Watch Page Container -->
+    <main class="feed-container">
+
+      <!-- 1. FEED VIEW (Home Video Grid) -->
+      <div class="view-section active" id="feed-view">
+        <!-- Category Filter Chips (Identical to Screenshot) -->
+        <div class="chips-wrapper">
+          <div class="chips-scroll-container" id="chips-container">
+            <button class="chip-item active" data-q="yapay zeka">Tümü</button>
+            <button class="chip-item" data-q="müzik">Müzik</button>
+            <button class="chip-item" data-q="oyun">Oyun</button>
+            <button class="chip-item" data-q="mix">Mix'ler</button>
+            <button class="chip-item" data-q="podcast">Podcast'ler</button>
+            <button class="chip-item" data-q="canlı">Canlı</button>
+            <button class="chip-item" data-q="haberler">Haberler</button>
+            <button class="chip-item" data-q="aksiyon macera oyunları">Aksiyon-macera oyunları</button>
+            <button class="chip-item" data-q="rap yapma">Rap yapma</button>
+            <button class="chip-item" data-q="doğa">Doğa</button>
+            <button class="chip-item" data-q="turizm">Turizm</button>
+            <button class="chip-item" data-q="yemek pişirme">Yemek pişirme</button>
+          </div>
+          <button class="chips-next-btn" id="chips-next" title="İleri">
+            <svg viewBox="0 0 24 24" width="24" height="24"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"></path></svg>
+          </button>
+        </div>
+
+        <!-- Video Grid Content -->
+        <div class="video-grid-scroll">
+          <div class="video-grid" id="video-grid">
+            <!-- Videos will be injected dynamically -->
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. WATCH VIEW (Official YouTube Watch Layout: Video on Left, Sidebar on Right) -->
+      <div class="view-section" id="watch-view">
+        <div class="watch-layout">
+          <!-- Left Main Stage: Large Player & Video Details -->
+          <div class="watch-main-stage">
+            <div class="watch-player-wrapper" id="watch-player-wrapper">
+              <div id="yt-player"></div>
+            </div>
+
+            <div class="watch-details-container">
+              <h1 class="watch-video-title" id="watch-title">Video Başlığı</h1>
+
+              <div class="watch-channel-row">
+                <div class="watch-channel-left">
+                  <div class="watch-channel-avatar" id="watch-channel-avatar">Y</div>
+                  <div class="watch-channel-info">
+                    <div class="watch-channel-name-wrap">
+                      <span class="watch-channel-name" id="watch-channel-name">Kanal Adı</span>
+                      <svg class="verified-icon" viewBox="0 0 24 24"><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zM9.8 17.3l-4.2-4.1L7 11.8l2.8 2.7L17 7.4l1.4 1.4-8.6 8.5z"></path></svg>
+                    </div>
+                    <span class="watch-sub-count">1,24 Mn abone</span>
+                  </div>
+                  <button class="watch-subscribe-btn">Abone Ol</button>
+                </div>
+
+                <div class="watch-actions-right">
+                  <div class="watch-like-pill">
+                    <button class="watch-action-btn like" id="watch-like-btn">
+                      <svg viewBox="0 0 24 24" width="20" height="20"><path d="M1 21h4V9H1v12zm22-11c0-1.1-.9-2-2-2h-6.31l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06L14.17 1 7.59 7.59C7.22 7.95 7 8.45 7 9v10c0 1.1.9 2 2 2h9c.83 0 1.54-.5 1.84-1.22l3.02-7.05c.09-.23.14-.47.14-.73v-2z"></path></svg>
+                      <span id="watch-like-count">12 B</span>
+                    </button>
+                    <div class="watch-pill-divider"></div>
+                    <button class="watch-action-btn dislike">
+                      <svg viewBox="0 0 24 24" width="20" height="20"><path d="M15 3H6c-.83 0-1.54.5-1.84 1.22l-3.02 7.05c-.09.23-.14.47-.14.73v2c0 1.1.9 2 2 2h6.31l-.95 4.57-.03.32c0 .41.17.79.44 1.06L9.83 23l6.59-6.59c.36-.36.58-.86.58-1.41V5c0-1.1-.9-2-2-2zm4 0v12h4V3h-4z"></path></svg>
+                    </button>
+                  </div>
+
+                  <button class="watch-action-pill-btn" id="watch-share-btn">
+                    <svg viewBox="0 0 24 24" width="20" height="20"><path d="M14 9V5l7 7-7 7v-4.1c-5 0-8.5 1.6-11 5.1 1-5 4-10 11-11z"></path></svg>
+                    <span>Paylaş</span>
+                  </button>
+
+                  <button class="watch-action-pill-btn" id="watch-add-queue-btn">
+                    <svg viewBox="0 0 24 24" width="20" height="20"><path d="M19 15v-3h-2v3h-3v2h3v3h2v-3h3v-2h-3zM3 5v14h10v-2H5V7h14v4h2V5H3z"></path></svg>
+                    <span>Sıraya Ekle</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Description Box -->
+              <div class="watch-desc-box">
+                <div class="watch-desc-stats" id="watch-stats">245 B görüntüleme • 3 gün önce</div>
+                <div class="watch-desc-text" id="watch-desc-text">
+                  Birlikte izleme odasında şu an bu video oynatılıyor. Tüm oda arkadaşlarınızla aynı saniyede ve senkronize olarak izliyorsunuz.
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right Sidebar: Recommended Videos List (Screenshot Match) -->
+          <div class="watch-sidebar-stage">
+            <div class="watch-sidebar-chips" id="watch-sidebar-chips">
+              <button class="chip-item active" data-q="tümü">Tümü</button>
+              <button class="chip-item" id="watch-uploader-chip" data-q="önerilen">İlgili</button>
+              <button class="chip-item" data-q="müzik">Müzik</button>
+              <button class="chip-item" data-q="oyun">Oyun</button>
+              <button class="chip-item" id="watch-queue-chip" data-q="queue">Sıra (<span id="watch-queue-badge">0</span>)</button>
+            </div>
+
+            <div class="watch-related-list" id="related-videos-list">
+              <!-- Related video items injected dynamically -->
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </main>
+
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════ SIDE DRAWERS -->
+  <!-- Users Drawer (Odadakiler) -->
+  <aside class="side-drawer" id="users-drawer">
+    <div class="drawer-header">
+      <span>Odada İzleyenler (<span id="users-drawer-count">1</span>)</span>
+      <button class="icon-button" id="users-close-btn" title="Kapat">
+        <svg viewBox="0 0 24 24" width="20" height="20"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg>
+      </button>
+    </div>
+    <div class="drawer-content" id="users-items-container">
+      <!-- Injected user items -->
+    </div>
+  </aside>
+
+  <!-- Queue Drawer -->
+  <aside class="side-drawer" id="queue-drawer">
+    <div class="drawer-header">
+      <span>Oynatma Sırası</span>
+      <button class="icon-button" id="queue-close-btn">
+        <svg viewBox="0 0 24 24" width="20" height="20"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg>
+      </button>
+    </div>
+    <div class="drawer-content" id="queue-items-container">
+      <!-- Injected queue items -->
+    </div>
+  </aside>
+
+  <!-- Chat Drawer -->
+  <aside class="side-drawer" id="chat-drawer">
+    <div class="drawer-header">
+      <span>Canlı Sohbet</span>
+      <button class="icon-button" id="chat-close-btn">
+        <svg viewBox="0 0 24 24" width="20" height="20"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg>
+      </button>
+    </div>
+    <div class="drawer-content" id="chat-msgs-container">
+      <!-- Chat messages -->
+    </div>
+    <form class="chat-input-row" id="chat-form">
+      <input type="text" class="chat-msg-input" id="chat-msg-input" placeholder="Sohbete yazın..." maxlength="300" autocomplete="off">
+      <button type="submit" class="icon-button" style="color:#3ea6ff;">
+        <svg viewBox="0 0 24 24" width="20" height="20"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"></path></svg>
+      </button>
+    </form>
+  </aside>
+
+  <!-- ═══════════════════════════════════════════════════════════ MODALS -->
+  <!-- ═══════════════════════════════════════════════════════════ CALL MODALS & OVERLAYS -->
+  <!-- Incoming Call Modal -->
+  <div class="modal-overlay" id="incoming-call-modal">
+    <div class="call-card">
+      <div class="call-avatar-wrap">
+        <div class="call-avatar" id="incoming-caller-avatar">K</div>
+        <div class="call-pulse-ring"></div>
+      </div>
+      <div class="call-name" id="incoming-caller-name">Kullanıcı</div>
+      <div class="call-status" id="incoming-call-type-txt">Seni sesli arıyor...</div>
+      
+      <div class="call-actions-row">
+        <button class="call-action-btn decline" id="incoming-decline-btn" title="Reddet">
+          <svg viewBox="0 0 24 24" width="24" height="24"><path d="M12 9c-1.6 0-3.15.25-4.6.72v3.1c0 .39-.23.74-.56.9-1.07.53-2.03 1.25-2.85 2.11-.18.18-.43.28-.7.28-.28 0-.53-.11-.71-.29L.29 13.53c-.18-.18-.29-.43-.29-.71 0-.28.11-.53.29-.71C3.34 9.17 7.46 7.5 12 7.5s8.66 1.67 11.71 4.61c.18.18.29.43.29.71 0 .28-.11.53-.29.71l-2.28 2.28c-.18.18-.43.29-.71.29-.27 0-.52-.11-.7-.28-.83-.86-1.79-1.58-2.85-2.11-.34-.16-.57-.51-.57-.9v-3.1C15.15 9.25 13.6 9 12 9z"></path></svg>
+        </button>
+        <button class="call-action-btn accept" id="incoming-accept-btn" title="Kabul Et">
+          <svg viewBox="0 0 24 24" width="24" height="24"><path d="M20.01 15.38c-1.23 0-2.42-.2-3.53-.56-.35-.12-.74-.03-1.01.24l-1.57 1.97c-2.83-1.35-5.48-3.9-6.89-6.83l1.95-1.66c.27-.28.35-.67.24-1.02-.37-1.11-.56-2.3-.56-3.53 0-.54-.45-.99-.99-.99H4.19C3.65 3 3 3.24 3 3.99 3 13.28 10.73 21 20.01 21c.71 0 .99-.63.99-1.18v-3.45c0-.54-.45-.99-.99-.99z"></path></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Outgoing Call Modal -->
+  <div class="modal-overlay" id="outgoing-call-modal">
+    <div class="call-card">
+      <div class="call-avatar-wrap">
+        <div class="call-avatar" id="outgoing-target-avatar">K</div>
+        <div class="call-pulse-ring"></div>
+      </div>
+      <div class="call-name" id="outgoing-target-name">Kullanıcı</div>
+      <div class="call-status" id="outgoing-call-type-txt">Aranıyor...</div>
+      
+      <div class="call-actions-row">
+        <button class="call-action-btn decline" id="outgoing-cancel-btn" title="İptal Et">
+          <svg viewBox="0 0 24 24" width="24" height="24"><path d="M12 9c-1.6 0-3.15.25-4.6.72v3.1c0 .39-.23.74-.56.9-1.07.53-2.03 1.25-2.85 2.11-.18.18-.43.28-.7.28-.28 0-.53-.11-.71-.29L.29 13.53c-.18-.18-.29-.43-.29-.71 0-.28.11-.53.29-.71C3.34 9.17 7.46 7.5 12 7.5s8.66 1.67 11.71 4.61c.18.18.29.43.29.71 0 .28-.11.53-.29.71l-2.28 2.28c-.18.18-.43.29-.71.29-.27 0-.52-.11-.7-.28-.83-.86-1.79-1.58-2.85-2.11-.34-.16-.57-.51-.57-.9v-3.1C15.15 9.25 13.6 9 12 9z"></path></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════ PREMIUM DRAGGABLE CALL WINDOW -->
+  <div class="active-call-overlay" id="active-call-overlay">
+    <!-- Draggable Header Bar -->
+    <div class="call-window-header" id="call-window-header">
+      <div class="call-header-left">
+        <svg class="drag-handle-icon" viewBox="0 0 24 24" width="16" height="16"><path d="M9 3H7v2h2V3zm0 4H7v2h2V7zm0 4H7v2h2v-2zm0 4H7v2h2v-2zm0 4H7v2h2v-2zm6-16h-2v2h2V3zm0 4h-2v2h2V7zm0 4h-2v2h2v-2zm0 4h-2v2h2v-2zm0 4h-2v2h2v-2z"></path></svg>
+        <span class="call-header-status-dot"></span>
+        <span class="call-header-title">Canlı Görüşme</span>
+        <span class="call-timer-badge" id="call-timer-badge">00:00</span>
+      </div>
+      <div class="call-header-actions">
+        <button class="call-win-btn" id="call-minimize-btn" title="Küçült / Büyüt">
+          <svg viewBox="0 0 24 24" width="14" height="14" id="min-max-icon"><path d="M19 13H5v-2h14v2z"></path></svg>
+        </button>
+        <button class="call-win-btn close" id="call-hide-btn" title="Görüşmeyi Gizle (Sol menüden açabilirsiniz)">
+          <svg viewBox="0 0 24 24" width="14" height="14"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Audio Stage (Voice Call Only) -->
+    <div class="call-video-grid" id="call-video-grid">
+      <!-- Remote User Audio Card -->
+      <div class="video-tile remote" id="remote-video-tile">
+        <div class="audio-avatar-card" id="remote-audio-wrapper">
+          <div class="audio-only-avatar" id="remote-audio-avatar">K</div>
+          <div class="audio-wave-animation">
+            <span></span><span></span><span></span><span></span>
+          </div>
+        </div>
+        <div class="video-user-pill">
+          <span class="live-pulse-dot"></span>
+          <span id="remote-user-label">Kullanıcı</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modern Controls Bar (Mic & Hangup) -->
+    <div class="call-controls-bar">
+      <button class="call-ctrl-btn" id="toggle-mic-btn" title="Mikrofonu Aç/Kapat">
+        <svg viewBox="0 0 24 24" width="20" height="20" id="mic-icon"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"></path><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"></path></svg>
+      </button>
+      <button class="call-ctrl-btn end-call" id="hangup-call-btn" title="Görüşmeyi Sonlandır">
+        <svg viewBox="0 0 24 24" width="22" height="22"><path d="M12 9c-1.6 0-3.15.25-4.6.72v3.1c0 .39-.23.74-.56.9-1.07.53-2.03 1.25-2.85 2.11-.18.18-.43.28-.7.28-.28 0-.53-.11-.71-.29L.29 13.53c-.18-.18-.29-.43-.29-.71 0-.28.11-.53.29-.71C3.34 9.17 7.46 7.5 12 7.5s8.66 1.67 11.71 4.61c.18.18.29.43.29.71 0 .28-.11.53-.29.71l-2.28 2.28c-.18.18-.43.29-.71.29-.27 0-.52-.11-.7-.28-.83-.86-1.79-1.58-2.85-2.11-.34-.16-.57-.51-.57-.9v-3.1C15.15 9.25 13.6 9 12 9z"></path></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════ DISCORD VOICE ACTIVITY OVERLAY -->
+  <div class="discord-voice-overlay" id="discord-voice-overlay">
+    <!-- Local Speaker Avatar -->
+    <div class="voice-speaker-item" id="local-speaker-item">
+      <div class="voice-speaker-avatar" id="local-speaker-avatar">S</div>
+      <div class="voice-speaker-name" id="local-speaker-name">Sen</div>
+    </div>
+    
+    <!-- Remote Speaker Avatar -->
+    <div class="voice-speaker-item" id="remote-speaker-item">
+      <div class="voice-speaker-avatar" id="remote-speaker-avatar">K</div>
+      <div class="voice-speaker-name" id="remote-speaker-name">Kullanıcı</div>
+    </div>
+  </div>
+
+  <!-- Room Management Modal -->
+  <div class="modal-overlay" id="room-modal">
+    <div class="modal-card" style="max-width: 440px;">
+      <div class="modal-title" style="display:flex; justify-content:space-between; align-items:center;">
+        <span>Birlikte İzleme Odası</span>
+        <button class="icon-button" id="modal-close-icon-btn" title="Kapat" style="margin-right:-8px;">
+          <svg viewBox="0 0 24 24" width="20" height="20"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg>
+        </button>
+      </div>
+
+      <!-- Current Room & Share Info -->
+      <div class="modal-room-info-card">
+        <div class="modal-room-header-row">
+          <div>
+            <div class="modal-room-sublabel">MEVCUT ODA KODU</div>
+            <div class="modal-room-code" id="modal-current-room-code">ABCDEF</div>
+          </div>
+          <button class="modal-copy-link-btn" id="modal-copy-link-btn" title="Davet Bağlantısını Kopyala">
+            <svg viewBox="0 0 24 24" width="16" height="16"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"></path></svg>
+            <span>Davet Linkini Kopyala</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- User Profile Settings -->
+      <div style="margin-top: 14px;">
+        <label class="modal-input-label">Kullanıcı Adınız</label>
+        <input type="text" class="modal-input" id="username-input" placeholder="Adınız" maxlength="20" value="Kullanıcı">
+      </div>
+
+      <!-- Actions Divider -->
+      <div class="modal-section-divider"></div>
+
+      <!-- Action 1: Create New Room -->
+      <button class="modal-action-row-btn primary-action" id="btn-create-new-room">
+        <div class="modal-action-icon">
+          <svg viewBox="0 0 24 24" width="20" height="20"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"></path></svg>
+        </div>
+        <div class="modal-action-text">
+          <div class="modal-action-title">Yeni Oda Kur</div>
+          <div class="modal-action-desc">Arkadaşlarınla izlemek için yeni bir oda oluşturur</div>
+        </div>
+      </button>
+
+      <!-- Action 2: Join Existing Room -->
+      <div class="modal-join-input-group">
+        <input type="text" class="modal-input" id="room-input" placeholder="Oda Kodu Gir (Örn: X8KP2M)" style="text-transform:uppercase; letter-spacing:2px; font-weight:600; margin-bottom:0;">
+        <button class="modal-join-submit-btn" id="btn-join-room">Odaya Katıl</button>
+      </div>
+
+      <!-- Action 3: Leave Room -->
+      <button class="modal-action-row-btn danger-action" id="btn-leave-room" style="margin-top: 14px;">
+        <div class="modal-action-icon danger">
+          <svg viewBox="0 0 24 24" width="20" height="20"><path d="M10.09 15.59L11.5 17l5-5-5-5-1.41 1.41L12.67 11H3v2h9.67l-2.58 2.59zM19 3H5c-1.11 0-2 .9-2 2v4h2V5h14v14H5v-4H3v4c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z"></path></svg>
+        </div>
+        <div class="modal-action-text">
+          <div class="modal-action-title">Odadan Ayrıl</div>
+          <div class="modal-action-desc">Mevcut odadan çıkıp varsayılan odaya döner</div>
+        </div>
+      </button>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div class="yt-toast" id="toast">Bildirim</div>
+
+</div>
+
+<!-- Hidden WebRTC Remote Audio Playback Element -->
+<audio id="webrtc-remote-audio" autoplay playsinline></audio>
+
+<!-- Hidden YouTube Player for Audio/Video Sync -->
+<div style="position:fixed; bottom:70px; right:10px; width:1px; height:1px; opacity:0; pointer-events:none;">
+  <!-- Fallback player container if needed -->
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="https://www.youtube.com/iframe_api"></script>
+<script src="app.js"></script>
+</body>
+</html>

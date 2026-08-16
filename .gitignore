@@ -1,0 +1,7 @@
+node_modules/
+.env
+watchparty.sqlite
+watchparty.sqlite-wal
+watchparty.sqlite-shm
+.DS_Store
+*.log
