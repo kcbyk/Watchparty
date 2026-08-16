@@ -571,6 +571,75 @@ if (watchAddQueueBtn) {
   });
 }
 
+const CLIENT_FALLBACK_VIDEOS = [
+  {
+    id: "dQw4w9WgXcQ",
+    title: "Rick Astley - Never Gonna Give You Up (Official Music Video)",
+    thumbnail: "https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg",
+    duration: "3:33",
+    author: "Rick Astley",
+    channelAvatar: "",
+    subCount: "4,2 Mn abone",
+    ago: "14 yıl önce",
+    views: "1,5 Mr görüntüleme"
+  },
+  {
+    id: "kJQP7kiw5Fk",
+    title: "Luis Fonsi - Despacito ft. Daddy Yankee",
+    thumbnail: "https://i.ytimg.com/vi/kJQP7kiw5Fk/hqdefault.jpg",
+    duration: "4:42",
+    author: "Luis Fonsi",
+    channelAvatar: "",
+    subCount: "31 Mn abone",
+    ago: "7 yıl önce",
+    views: "8,4 Mr görüntüleme"
+  },
+  {
+    id: "9bZkp7q19f0",
+    title: "PSY - GANGNAM STYLE (강남스타일) M/V",
+    thumbnail: "https://i.ytimg.com/vi/9bZkp7q19f0/hqdefault.jpg",
+    duration: "4:13",
+    author: "officialpsy",
+    channelAvatar: "",
+    subCount: "19 Mn abone",
+    ago: "12 yıl önce",
+    views: "5,1 Mr görüntüleme"
+  },
+  {
+    id: "fJ9rUzIMcZQ",
+    title: "Queen – Bohemian Rhapsody (Official Video Remastered)",
+    thumbnail: "https://i.ytimg.com/vi/fJ9rUzIMcZQ/hqdefault.jpg",
+    duration: "5:59",
+    author: "Queen Official",
+    channelAvatar: "",
+    subCount: "17 Mn abone",
+    ago: "15 yıl önce",
+    views: "1,7 Mr görüntüleme"
+  },
+  {
+    id: "JGwWNGJdvx8",
+    title: "Ed Sheeran - Shape of You (Official Music Video)",
+    thumbnail: "https://i.ytimg.com/vi/JGwWNGJdvx8/hqdefault.jpg",
+    duration: "4:24",
+    author: "Ed Sheeran",
+    channelAvatar: "",
+    subCount: "54 Mn abone",
+    ago: "7 yıl önce",
+    views: "6,2 Mr görüntüleme"
+  },
+  {
+    id: "OPf0YbXqDm0",
+    title: "Mark Ronson - Uptown Funk (Official Video) ft. Bruno Mars",
+    thumbnail: "https://i.ytimg.com/vi/OPf0YbXqDm0/hqdefault.jpg",
+    duration: "4:31",
+    author: "Mark Ronson",
+    channelAvatar: "",
+    subCount: "11 Mn abone",
+    ago: "9 yıl önce",
+    views: "5,2 Mr görüntüleme"
+  }
+];
+
 // ─── Search & Feed Rendering ───────────────────────────────────────────────
 async function fetchAndRenderFeed(query) {
   currentFeedQuery = query || 'yapay zeka';
@@ -578,32 +647,27 @@ async function fetchAndRenderFeed(query) {
   hasMoreFeed = true;
   if (videoGridScroll) videoGridScroll.scrollTop = 0;
 
-  videoGrid.innerHTML = `
-    <div style="grid-column: 1/-1; padding: 40px 0; text-align: center; color: var(--yt-text-secondary); font-size: 15px;">
-      Yükleniyor...
-    </div>
-  `;
+  if (videoGrid) {
+    videoGrid.innerHTML = `
+      <div style="grid-column: 1/-1; padding: 40px 0; text-align: center; color: var(--yt-text-secondary); font-size: 15px;">
+        Yükleniyor...
+      </div>
+    `;
+  }
 
   try {
     const res = await fetch(`/api/search?q=${encodeURIComponent(currentFeedQuery)}&page=1&limit=16`);
     const videos = await res.json();
 
     if (!Array.isArray(videos) || videos.length === 0) {
-      videoGrid.innerHTML = `
-        <div style="grid-column: 1/-1; padding: 60px 0; text-align: center; color: var(--yt-text-secondary);">
-          Sonuç bulunamadı.
-        </div>
-      `;
+      renderVideoGrid(CLIENT_FALLBACK_VIDEOS);
       return;
     }
 
     renderVideoGrid(videos);
   } catch (err) {
-    videoGrid.innerHTML = `
-      <div style="grid-column: 1/-1; padding: 60px 0; text-align: center; color: var(--yt-text-secondary);">
-        Videolar yüklenirken bir sorun oluştu.
-      </div>
-    `;
+    console.warn('[Feed Fetch Error - Using Fallback]', err);
+    renderVideoGrid(CLIENT_FALLBACK_VIDEOS);
   }
 }
 

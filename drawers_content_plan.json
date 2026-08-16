@@ -1,0 +1,45 @@
+{
+  "projectId": "e50a500a-0bc3-44b7-bb6b-e0b2727ec78f",
+  "type": "frontend",
+  "name": "Sidebar Drawers and Page Content Test",
+  "description": "Verifies that clicking Odadakiler opens the members drawer showing current user, clicking Sohbet opens the chat drawer, and clicking Sıra opens the queue drawer.",
+  "priority": "p0",
+  "planSteps": [
+    {
+      "type": "action",
+      "description": "Navigate to https://watchparty-fnxs.onrender.com"
+    },
+    {
+      "type": "action",
+      "description": "Click the 'Odadakiler' button in the left sidebar"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify that the Odadakiler drawer opens showing the connected users list with the current user labeled as 'Sen'"
+    },
+    {
+      "type": "action",
+      "description": "Click the close button on the Odadakiler drawer"
+    },
+    {
+      "type": "action",
+      "description": "Click the 'Sohbet' button in the left sidebar"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify that the live chat drawer opens with the message input field and send button"
+    },
+    {
+      "type": "action",
+      "description": "Click the close button on the Sohbet drawer"
+    },
+    {
+      "type": "action",
+      "description": "Click the 'Sıra' button in the left sidebar"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify that the playlist queue drawer opens"
+    }
+  ]
+}

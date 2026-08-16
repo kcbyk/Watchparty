@@ -1,0 +1,33 @@
+{
+  "projectId": "e50a500a-0bc3-44b7-bb6b-e0b2727ec78f",
+  "type": "frontend",
+  "name": "Room Connection and Modal Interaction Test",
+  "description": "Verifies that room code is assigned immediately upon load, clicking room status pill opens room management modal, creating a new room updates the room code, and modal closes properly.",
+  "priority": "p0",
+  "planSteps": [
+    {
+      "type": "action",
+      "description": "Navigate to https://watchparty-fnxs.onrender.com"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify that room code indicator displays an active 6-character room code instead of staying stuck on BAĞLANIYOR"
+    },
+    {
+      "type": "action",
+      "description": "Click on the room status pill in the top right header"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify that the Room Management Modal opens, showing the current room code, username input, and action buttons"
+    },
+    {
+      "type": "action",
+      "description": "Click the 'Yeni Oda Oluştur' button inside the modal"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify that a new room is created, toast notification is displayed, and the modal closes"
+    }
+  ]
+}
