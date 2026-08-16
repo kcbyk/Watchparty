@@ -2220,6 +2220,18 @@ svg {
   }
 }
 
+@media (min-width: 861px) {
+  .mobile-search-overlay {
+    display: none !important;
+  }
+  .mobile-bottom-nav {
+    display: none !important;
+  }
+  .mobile-search-trigger-btn {
+    display: none !important;
+  }
+}
+
 /* ══════════════════════════════════════════════════════════════════════════════
    FULL-SCREEN MOBILE SEARCH OVERLAY (YOUTUBE MOBILE EXPERIENCE)
    ══════════════════════════════════════════════════════════════════════════════ */
