@@ -834,6 +834,11 @@ if (chatSidebarBtn) {
     }
   });
 }
+if (chatCloseBtn) {
+  chatCloseBtn.addEventListener('click', () => {
+    chatDrawer.classList.remove('open');
+  });
+}
 
 if (callSidebarBtn) {
   callSidebarBtn.addEventListener('click', () => {
@@ -1481,25 +1486,113 @@ if (btnLeaveRoom) {
   });
 }
 
-// ─── Mobile Specific Handlers (Search Toggle & Bottom Nav) ──────────────────
-const mobileSearchTriggerBtn = document.getElementById('mobile-search-trigger-btn');
-const mobileSearchBackBtn = document.getElementById('mobile-search-back-btn');
-const ytHeaderCenter = document.getElementById('yt-header-center');
-const mobNavHome = document.getElementById('mob-nav-home');
-const mobNavRoom = document.getElementById('mob-nav-room');
-const mobNavChat = document.getElementById('mob-nav-chat');
-const mobNavUsers = document.getElementById('mob-nav-users');
+// ─── Mobile Full-Screen Search & Suggestions (YouTube Mobile Style) ────────
+const mobileSearchOverlay = document.getElementById('mobile-search-overlay');
+const mobSearchInput = document.getElementById('mob-search-input');
+const mobSearchCloseBtn = document.getElementById('mob-search-close-btn');
+const mobSearchClearBtn = document.getElementById('mob-search-clear-btn');
+const mobSearchSuggestionsList = document.getElementById('mob-search-suggestions-list');
 
-if (mobileSearchTriggerBtn && ytHeaderCenter) {
-  mobileSearchTriggerBtn.addEventListener('click', () => {
-    ytHeaderCenter.classList.add('search-active');
-    searchInput.focus();
+const initialMobileSuggestions = [
+  'galatasaray çorum',
+  'ataberk doğan',
+  'izliyor',
+  'wegh',
+  'yapay zeka',
+  'jahrein cenk bey',
+  'guldur guldur show',
+  'fenerbahçe maç özeti',
+  'kısmetse olur 4 sezon',
+  'trabzonspor',
+  'yıldız tilbe',
+  'müslüm gürses',
+  'erkan kolçak köstendil',
+  'valorant fps arttırma unlost'
+];
+
+function renderMobileSearchSuggestions(items) {
+  if (!mobSearchSuggestionsList) return;
+  mobSearchSuggestionsList.innerHTML = '';
+
+  items.forEach(text => {
+    const item = document.createElement('div');
+    item.className = 'mob-suggest-item';
+    item.innerHTML = `
+      <div class="mob-suggest-icon">
+        <svg viewBox="0 0 24 24" width="20" height="20"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"></path></svg>
+      </div>
+      <div class="mob-suggest-text">${escapeHtml(text)}</div>
+      <div class="mob-suggest-arrow">
+        <svg viewBox="0 0 24 24" width="18" height="18"><path d="M9 5v2h6.59L4 18.59 5.41 20 17 8.41V15h2V5z"></path></svg>
+      </div>
+    `;
+
+    item.addEventListener('click', () => {
+      mobileSearchOverlay.classList.remove('active');
+      searchInput.value = text;
+      openFeedView();
+      fetchAndRenderFeed(text);
+      showToast(`Aranıyor: "${text}" 🔍`);
+    });
+
+    mobSearchSuggestionsList.appendChild(item);
   });
 }
 
-if (mobileSearchBackBtn && ytHeaderCenter) {
-  mobileSearchBackBtn.addEventListener('click', () => {
-    ytHeaderCenter.classList.remove('search-active');
+if (mobileSearchTriggerBtn && mobileSearchOverlay) {
+  mobileSearchTriggerBtn.addEventListener('click', () => {
+    mobileSearchOverlay.classList.add('active');
+    mobSearchInput.value = searchInput.value || '';
+    if (mobSearchClearBtn) mobSearchClearBtn.style.display = mobSearchInput.value ? 'flex' : 'none';
+    renderMobileSearchSuggestions(initialMobileSuggestions);
+    setTimeout(() => mobSearchInput.focus(), 100);
+  });
+}
+
+if (mobSearchCloseBtn && mobileSearchOverlay) {
+  mobSearchCloseBtn.addEventListener('click', () => {
+    mobileSearchOverlay.classList.remove('active');
+  });
+}
+
+if (mobSearchClearBtn && mobSearchInput) {
+  mobSearchClearBtn.addEventListener('click', () => {
+    mobSearchInput.value = '';
+    mobSearchClearBtn.style.display = 'none';
+    renderMobileSearchSuggestions(initialMobileSuggestions);
+    mobSearchInput.focus();
+  });
+}
+
+if (mobSearchInput) {
+  mobSearchInput.addEventListener('input', (e) => {
+    const val = e.target.value.trim().toLowerCase();
+    if (mobSearchClearBtn) mobSearchClearBtn.style.display = val ? 'flex' : 'none';
+
+    if (!val) {
+      renderMobileSearchSuggestions(initialMobileSuggestions);
+      return;
+    }
+
+    const filtered = initialMobileSuggestions.filter(s => s.toLowerCase().includes(val));
+    if (!filtered.includes(val)) {
+      filtered.unshift(val);
+    }
+    renderMobileSearchSuggestions(filtered);
+  });
+
+  mobSearchInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const val = mobSearchInput.value.trim();
+      if (val) {
+        mobileSearchOverlay.classList.remove('active');
+        searchInput.value = val;
+        openFeedView();
+        fetchAndRenderFeed(val);
+        showToast(`Aranıyor: "${val}" 🔍`);
+      }
+    }
   });
 }
 
