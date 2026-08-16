@@ -2028,7 +2028,7 @@ svg {
     left: 0;
     width: 100%;
     height: 48px;
-    background: var(--yt-bg-primary);
+    background: #0f0f0f;
     z-index: 10000;
     padding: 4px 8px;
     align-items: center;
@@ -2073,7 +2073,7 @@ svg {
   .chips-wrapper {
     padding: 8px 12px !important;
     margin: 0 !important;
-    background: var(--yt-bg-primary) !important;
+    background: #0f0f0f !important;
     border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
   }
   .chip-item {
@@ -2242,7 +2242,7 @@ svg {
   left: 0;
   width: 100vw;
   height: 100vh;
-  background: var(--yt-bg-primary);
+  background: #0f0f0f;
   z-index: 999999;
   flex-direction: column;
   overflow-y: auto;
@@ -2259,7 +2259,7 @@ svg {
   padding: 6px 12px;
   height: 52px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  background: var(--yt-bg-primary);
+  background: #0f0f0f;
   position: sticky;
   top: 0;
   z-index: 10;
