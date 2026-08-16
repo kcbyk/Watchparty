@@ -1148,7 +1148,8 @@ function renderUsersList() {
   }
 
   connectedUsers.forEach((u) => {
-    const isMe = u.name === username;
+    // socket.id'yi öncelikli kullan, yoksa isim karşılaştır
+    const isMe = socket && socket.id ? (u.id === socket.id) : (u.name === username);
     const initial = (u.name || 'K')[0].toUpperCase();
     const bg = getAvatarColor(u.name);
 
