@@ -625,13 +625,13 @@ const CLIENT_FALLBACK_VIDEOS = [
 ];
 
 // ─── Search & Feed Rendering ───────────────────────────────────────────────
-async function fetchAndRenderFeed(query) {
+async function fetchAndRenderFeed(query, showSpinner = true) {
   currentFeedQuery = query || 'yapay zeka';
   currentFeedPage = 1;
   hasMoreFeed = true;
   if (videoGridScroll) videoGridScroll.scrollTop = 0;
 
-  if (videoGrid) {
+  if (showSpinner && videoGrid) {
     videoGrid.innerHTML = `
       <div style="grid-column: 1/-1; padding: 40px 0; text-align: center; color: var(--yt-text-secondary); font-size: 15px;">
         Yükleniyor...
@@ -644,6 +644,7 @@ async function fetchAndRenderFeed(query) {
     const videos = await res.json();
 
     if (!Array.isArray(videos) || videos.length === 0) {
+      if (!showSpinner) return; // background fetch — keep existing cards
       renderVideoGrid(CLIENT_FALLBACK_VIDEOS);
       return;
     }
@@ -651,7 +652,7 @@ async function fetchAndRenderFeed(query) {
     renderVideoGrid(videos);
   } catch (err) {
     console.warn('[Feed Fetch Error - Using Fallback]', err);
-    renderVideoGrid(CLIENT_FALLBACK_VIDEOS);
+    if (showSpinner) renderVideoGrid(CLIENT_FALLBACK_VIDEOS);
   }
 }
 
@@ -807,7 +808,9 @@ window.onYouTubeIframeAPIReady = function() {
       iv_load_policy: 3,
       controls: 1,
       playsinline: 1,
-      enablejsapi: 1
+      enablejsapi: 1,
+      origin: window.location.origin,
+      host: 'https://www.youtube-nocookie.com'
     },
     events: {
       onReady: (event) => {
@@ -847,9 +850,9 @@ function loadVideo(video, state) {
       if (playerReady && player && typeof player.loadVideoById === 'function') {
         clearInterval(check);
         _execLoad(video, state);
-      } else if (attempts > 50) {
+      } else if (attempts > 20) { // Reduced from 50 to 20 (2 seconds max wait)
         clearInterval(check);
-        // Ultimate fallback: swap iframe to direct YouTube embed
+        // Fallback to direct nocookie iframe immediately
         _loadVideoViaIframe(video.id);
       }
     }, 100);
@@ -890,14 +893,15 @@ function _execLoad(video, state) {
 function _loadVideoViaIframe(videoId) {
   const wrapper = document.getElementById('watch-player-wrapper');
   if (!wrapper) return;
+  const origin = encodeURIComponent(window.location.origin);
   wrapper.innerHTML = `
     <iframe
       id="yt-player-fallback"
-      src="https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1&playsinline=1&controls=1"
+      src="https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1&playsinline=1&controls=1&origin=${origin}"
       width="100%"
       height="100%"
       frameborder="0"
-      allow="autoplay; encrypted-media; picture-in-picture"
+      allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
       allowfullscreen
       style="border:0; width:100%; height:100%; min-height:400px;"
     ></iframe>
@@ -1630,11 +1634,18 @@ if (btnLeaveRoom) {
 }
 
 // ─── Mobile Full-Screen Search & Suggestions (YouTube Mobile Style) ────────
+const mobileSearchTriggerBtn = document.getElementById('mobile-search-trigger-btn');
 const mobileSearchOverlay = document.getElementById('mobile-search-overlay');
 const mobSearchInput = document.getElementById('mob-search-input');
 const mobSearchCloseBtn = document.getElementById('mob-search-close-btn');
 const mobSearchClearBtn = document.getElementById('mob-search-clear-btn');
 const mobSearchSuggestionsList = document.getElementById('mob-search-suggestions-list');
+
+// Mobile Bottom Nav
+const mobNavHome = document.getElementById('mob-nav-home');
+const mobNavRoom = document.getElementById('mob-nav-room');
+const mobNavChat = document.getElementById('mob-nav-chat');
+const mobNavUsers = document.getElementById('mob-nav-users');
 
 const initialMobileSuggestions = [
   'galatasaray çorum',
@@ -1778,31 +1789,51 @@ function startApp() {
     if (searchInput) searchInput.value = '';
     if (clearSearchBtn) clearSearchBtn.classList.remove('visible');
 
-    // 1. Instantly show fallback video cards - don't wait for API
-    renderVideoGrid(CLIENT_FALLBACK_VIDEOS);
-
-    // 2. Generate a room code immediately so the pill shows a code, not BAĞLANIYOR
+    // 1. Generate a room code immediately so the pill shows a code, not BAĞLANIYOR
     const urlParams = new URLSearchParams(window.location.search);
     const paramRoom = urlParams.get('room');
     const instantRoom = paramRoom ? paramRoom.toUpperCase() : generateNewRoomCode();
     roomId = instantRoom;
     if (roomCodeDisplay) roomCodeDisplay.textContent = roomId;
 
-    // 3. In parallel: fetch real videos from API (replace fallback when ready)
-    fetchAndRenderFeed('popüler müzik trend');
+    // 2. Instantly show fallback video cards - visible immediately on page load
+    if (videoGrid) {
+      renderVideoGrid(CLIENT_FALLBACK_VIDEOS);
+    }
+
+    // 3. In background: fetch real videos from API (replace fallback when ready)
+    _fetchFeedInBackground('popüler müzik trend');
 
     // 4. Connect to socket and join room
     initRoom();
   } catch (err) {
     console.error('[startApp Error]', err);
-    renderVideoGrid(CLIENT_FALLBACK_VIDEOS);
+    if (videoGrid) renderVideoGrid(CLIENT_FALLBACK_VIDEOS);
   }
 }
 
+// startApp'ı DOMContentLoaded'a bağla — her koşulda çalışsın
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', startApp);
 } else {
+  // DOM zaten hazır (script body sonunda)
   startApp();
+}
+
+// Fetch feed videos silently in the background without showing loading spinner
+async function _fetchFeedInBackground(query) {
+  currentFeedQuery = query;
+  currentFeedPage = 1;
+  hasMoreFeed = true;
+  try {
+    const res = await fetch(`/api/search?q=${encodeURIComponent(query)}&page=1&limit=16`);
+    const videos = await res.json();
+    if (Array.isArray(videos) && videos.length > 0) {
+      renderVideoGrid(videos);
+    }
+  } catch (err) {
+    console.warn('[Background Feed Fetch Error - Keeping Fallback]', err);
+  }
 }
 
 // ─── Global Keyboard Shortcuts (Space = Play/Pause, Arrows = Seek) ──────────
