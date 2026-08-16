@@ -81,7 +81,6 @@ function generateNewRoomCode() {
 // ─── Socket & Room Logic ───────────────────────────────────────────────────
 function initRoom() {
   const urlParams = new URLSearchParams(window.location.search);
-  const paramRoom = urlParams.get('room');
   const paramUser = urlParams.get('user');
 
   if (paramUser) username = paramUser;
@@ -105,26 +104,11 @@ function initRoom() {
 
     setupSocketEvents();
 
-    // When socket connects, get room from server then join
+    // When socket connects, join the room that was already set in startApp
     socket.on('connect', () => {
       console.log('[Socket] Connected:', socket.id);
-      if (paramRoom) {
-        // Join existing room from URL
-        roomId = paramRoom.toUpperCase();
-        joinRoom(roomId, username);
-      } else {
-        // Get a fresh room ID from server
-        fetch('/api/new-room')
-          .then(res => res.json())
-          .then(data => {
-            roomId = (data && data.roomId) ? data.roomId : generateNewRoomCode();
-            joinRoom(roomId, username);
-          })
-          .catch(() => {
-            roomId = generateNewRoomCode();
-            joinRoom(roomId, username);
-          });
-      }
+      // roomId is already set by startApp — just join it
+      joinRoom(roomId, username);
     });
 
     socket.on('connect_error', (err) => {
@@ -823,8 +807,7 @@ window.onYouTubeIframeAPIReady = function() {
       iv_load_policy: 3,
       controls: 1,
       playsinline: 1,
-      enablejsapi: 1,
-      origin: window.location.origin
+      enablejsapi: 1
     },
     events: {
       onReady: (event) => {
@@ -864,8 +847,10 @@ function loadVideo(video, state) {
       if (playerReady && player && typeof player.loadVideoById === 'function') {
         clearInterval(check);
         _execLoad(video, state);
-      } else if (attempts > 30) {
+      } else if (attempts > 50) {
         clearInterval(check);
+        // Ultimate fallback: swap iframe to direct YouTube embed
+        _loadVideoViaIframe(video.id);
       }
     }, 100);
     return;
@@ -874,7 +859,10 @@ function loadVideo(video, state) {
 }
 
 function _execLoad(video, state) {
-  if (!player || typeof player.loadVideoById !== 'function') return;
+  if (!player || typeof player.loadVideoById !== 'function') {
+    _loadVideoViaIframe(video.id);
+    return;
+  }
   doSync(() => {
     try {
       player.loadVideoById({
@@ -885,16 +873,37 @@ function _execLoad(video, state) {
         isPlaying = true;
         setTimeout(() => {
           try { player.playVideo(); } catch(_) {}
-        }, 100);
+        }, 300);
       } else {
         setTimeout(() => {
           try { player.pauseVideo(); isPlaying = false; } catch(_) {}
-        }, 200);
+        }, 300);
       }
     } catch (err) {
-      console.warn('[Video Load Error]', err);
+      console.warn('[Video Load Error - Trying iframe fallback]', err);
+      _loadVideoViaIframe(video.id);
     }
   });
+}
+
+// Direct iframe fallback when YouTube API fails or CORS blocks
+function _loadVideoViaIframe(videoId) {
+  const wrapper = document.getElementById('watch-player-wrapper');
+  if (!wrapper) return;
+  wrapper.innerHTML = `
+    <iframe
+      id="yt-player-fallback"
+      src="https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1&playsinline=1&controls=1"
+      width="100%"
+      height="100%"
+      frameborder="0"
+      allow="autoplay; encrypted-media; picture-in-picture"
+      allowfullscreen
+      style="border:0; width:100%; height:100%; min-height:400px;"
+    ></iframe>
+  `;
+  playerReady = false; // player API no longer valid
+  player = null;
 }
 
 function updatePlayIcon(playing) {
@@ -1768,16 +1777,25 @@ function startApp() {
   try {
     if (searchInput) searchInput.value = '';
     if (clearSearchBtn) clearSearchBtn.classList.remove('visible');
-    
-    // Always fetch and render feed first
-    fetchAndRenderFeed('trend popüler türkiye');
 
-    // Connect to room & socket
+    // 1. Instantly show fallback video cards - don't wait for API
+    renderVideoGrid(CLIENT_FALLBACK_VIDEOS);
+
+    // 2. Generate a room code immediately so the pill shows a code, not BAĞLANIYOR
+    const urlParams = new URLSearchParams(window.location.search);
+    const paramRoom = urlParams.get('room');
+    const instantRoom = paramRoom ? paramRoom.toUpperCase() : generateNewRoomCode();
+    roomId = instantRoom;
+    if (roomCodeDisplay) roomCodeDisplay.textContent = roomId;
+
+    // 3. In parallel: fetch real videos from API (replace fallback when ready)
+    fetchAndRenderFeed('popüler müzik trend');
+
+    // 4. Connect to socket and join room
     initRoom();
   } catch (err) {
     console.error('[startApp Error]', err);
-    // Fallback feed load
-    fetchAndRenderFeed('trend popüler türkiye');
+    renderVideoGrid(CLIENT_FALLBACK_VIDEOS);
   }
 }
 
