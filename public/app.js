@@ -140,6 +140,13 @@ function joinRoom(rId, uName) {
   roomId = rId;
   if (roomCodeDisplay) roomCodeDisplay.textContent = roomId;
   localStorage.setItem('yt_wp_user', uName);
+
+  // Proactively ensure local user is in connectedUsers list so drawer never shows empty
+  if (!connectedUsers.some(u => u.name === uName)) {
+    connectedUsers = [{ id: socket?.id || 'me', name: uName }, ...connectedUsers];
+    renderUsersList();
+  }
+
   if (socket && typeof socket.emit === 'function') {
     socket.emit('join-room', { room: roomId, user: uName });
   }

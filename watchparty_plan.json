@@ -1,0 +1,29 @@
+{
+  "projectId": "e50a500a-0bc3-44b7-bb6b-e0b2727ec78f",
+  "type": "frontend",
+  "name": "WatchParty Video Feed and Search Verification",
+  "description": "Verifies that WatchParty loads initial YouTube videos on home feed, search works properly, and clicking a video card transitions to the player view.",
+  "priority": "p0",
+  "planSteps": [
+    {
+      "type": "action",
+      "description": "Navigate to the homepage at https://watchparty-fnxs.onrender.com"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify that the header logo, search bar, and room status pill are visible"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify that video cards are loaded and displayed in the video grid with titles and thumbnails"
+    },
+    {
+      "type": "action",
+      "description": "Click on the first video card in the video grid"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify that the watch view opens, displaying the video title, channel information, and YouTube iframe player"
+    }
+  ]
+}
