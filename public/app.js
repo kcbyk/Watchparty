@@ -1481,6 +1481,61 @@ if (btnLeaveRoom) {
   });
 }
 
+// ─── Mobile Specific Handlers (Search Toggle & Bottom Nav) ──────────────────
+const mobileSearchTriggerBtn = document.getElementById('mobile-search-trigger-btn');
+const mobileSearchBackBtn = document.getElementById('mobile-search-back-btn');
+const ytHeaderCenter = document.getElementById('yt-header-center');
+const mobNavHome = document.getElementById('mob-nav-home');
+const mobNavRoom = document.getElementById('mob-nav-room');
+const mobNavChat = document.getElementById('mob-nav-chat');
+const mobNavUsers = document.getElementById('mob-nav-users');
+
+if (mobileSearchTriggerBtn && ytHeaderCenter) {
+  mobileSearchTriggerBtn.addEventListener('click', () => {
+    ytHeaderCenter.classList.add('search-active');
+    searchInput.focus();
+  });
+}
+
+if (mobileSearchBackBtn && ytHeaderCenter) {
+  mobileSearchBackBtn.addEventListener('click', () => {
+    ytHeaderCenter.classList.remove('search-active');
+  });
+}
+
+// Mobile Bottom Nav Item Click Handlers
+if (mobNavHome) {
+  mobNavHome.addEventListener('click', () => {
+    document.querySelectorAll('.mobile-nav-item').forEach(i => i.classList.remove('active'));
+    mobNavHome.classList.add('active');
+    usersDrawer.classList.remove('open');
+    chatDrawer.classList.remove('open');
+    openFeedView();
+  });
+}
+
+if (mobNavRoom) {
+  mobNavRoom.addEventListener('click', () => {
+    usersDrawer.classList.remove('open');
+    chatDrawer.classList.remove('open');
+    openRoomModal();
+  });
+}
+
+if (mobNavChat) {
+  mobNavChat.addEventListener('click', () => {
+    usersDrawer.classList.remove('open');
+    chatDrawer.classList.toggle('open');
+  });
+}
+
+if (mobNavUsers) {
+  mobNavUsers.addEventListener('click', () => {
+    chatDrawer.classList.remove('open');
+    usersDrawer.classList.toggle('open');
+  });
+}
+
 // ─── Initialize ────────────────────────────────────────────────────────────
 function startApp() {
   searchInput.value = '';

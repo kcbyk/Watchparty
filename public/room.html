@@ -31,7 +31,10 @@
     </div>
 
     <!-- Center Search Bar -->
-    <div class="yt-header-center">
+    <div class="yt-header-center" id="yt-header-center">
+      <button type="button" class="icon-button mobile-search-back-btn" id="mobile-search-back-btn" title="Geri">
+        <svg viewBox="0 0 24 24" width="24" height="24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"></path></svg>
+      </button>
       <form class="search-box-form" id="search-form">
         <div class="search-input-wrapper">
           <input type="text" class="search-input" id="search-input" placeholder="Ara" value="" autocomplete="off">
@@ -50,6 +53,10 @@
 
     <!-- Right Actions -->
     <div class="yt-header-right">
+      <button class="icon-button mobile-search-trigger-btn" id="mobile-search-trigger-btn" title="Ara">
+        <svg viewBox="0 0 24 24" width="24" height="24"><path d="M20.87 20.17l-5.59-5.59C16.35 13.35 17 11.75 17 10c0-3.87-3.13-7-7-7s-7 3.13-7 7 3.13 7 7 7c1.75 0 3.35-.65 4.58-1.71l5.59 5.59.7-.71zM10 16c-3.31 0-6-2.69-6-6s2.69-6 6-6 6 2.69 6 6-2.69 6-6 6z"></path></svg>
+      </button>
+
       <div class="room-status-pill" id="room-status-btn" title="Oda Detayları ve Katılma">
         <span class="live-indicator"></span>
         <span>Oda:</span>
@@ -59,11 +66,6 @@
       <button class="create-btn" id="create-action-btn">
         <svg viewBox="0 0 24 24" width="20" height="20"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"></path></svg>
         <span>Oluştur</span>
-      </button>
-
-      <button class="icon-button notification-btn" title="Bildirimler">
-        <svg viewBox="0 0 24 24" width="24" height="24"><path d="M10 20h4c0 1.1-.9 2-2 2s-2-.9-2-2zm10-2v1H4v-1l2-2v-6c0-3.1 2-5.6 5-6.3V3c0-.6.4-1 1-1s1 .4 1 1v.7c3 .7 5 3.2 5 6.3v6l2 2zm-3-8c0-2.8-2.2-5-5-5s-5 2.2-5 5v7h10v-7z"></path></svg>
-        <span class="notification-badge">9+</span>
       </button>
 
       <div class="user-avatar-btn" id="user-avatar-badge" title="Profil">K</div>
@@ -428,6 +430,28 @@
       </button>
     </div>
   </div>
+
+  <!-- Mobile Bottom Navigation Bar (YouTube Mobile App Style) -->
+  <nav class="mobile-bottom-nav" id="mobile-bottom-nav">
+    <button class="mobile-nav-item active" id="mob-nav-home" title="Ana Sayfa">
+      <svg viewBox="0 0 24 24" width="24" height="24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"></path></svg>
+      <span>Ana Sayfa</span>
+    </button>
+    <button class="mobile-nav-item" id="mob-nav-room" title="Oda Kur">
+      <svg viewBox="0 0 24 24" width="24" height="24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"></path></svg>
+      <span>Oda Kur</span>
+    </button>
+    <button class="mobile-nav-item" id="mob-nav-chat" title="Sohbet">
+      <svg viewBox="0 0 24 24" width="24" height="24"><path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 9h12v2H6V9zm8 5H6v-2h8v2zm4-6H6V6h12v2z"></path></svg>
+      <span class="mob-nav-badge" id="mob-chat-badge" style="display:none;"></span>
+      <span>Sohbet</span>
+    </button>
+    <button class="mobile-nav-item" id="mob-nav-users" title="Odada İzleyenler">
+      <svg viewBox="0 0 24 24" width="24" height="24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"></path></svg>
+      <span class="mob-nav-count" id="mob-users-count">1</span>
+      <span>İzleyenler</span>
+    </button>
+  </nav>
 
   <!-- Toast Notification -->
   <div class="yt-toast" id="toast">Bildirim</div>
