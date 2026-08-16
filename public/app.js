@@ -186,26 +186,42 @@ function setupSocketEvents() {
   });
 
   socket.on('video-play', (time) => {
-    if (!playerReady) return;
+    if (!playerReady || !player) return;
     doSync(() => {
-      player.seekTo(time, true);
-      player.playVideo();
-      updatePlayIcon(true);
+      try { player.seekTo(time, true); player.playVideo(); updatePlayIcon(true); } catch (_) {}
     });
   });
 
   socket.on('video-pause', (time) => {
-    if (!playerReady) return;
+    if (!playerReady || !player) return;
     doSync(() => {
-      player.seekTo(time, true);
-      player.pauseVideo();
-      updatePlayIcon(false);
+      try { player.seekTo(time, true); player.pauseVideo(); updatePlayIcon(false); } catch (_) {}
     });
   });
 
   socket.on('video-seek', (time) => {
-    if (!playerReady) return;
-    doSync(() => player.seekTo(time, true));
+    if (!playerReady || !player) return;
+    doSync(() => { try { player.seekTo(time, true); } catch (_) {} });
+  });
+
+  // ─── Sync Handler — sunucudan gelen anlık durum ───────────────────────────
+  socket.on('sync', ({ video, time, playing }) => {
+    if (!video) return;
+    // Video farklıysa yükle, aynıysa sadece seek et
+    if (!currentPlayingVideo || currentPlayingVideo.id !== video.id) {
+      loadVideo(video, { time, playing });
+    } else if (playerReady && player && typeof player.seekTo === 'function') {
+      doSync(() => {
+        try {
+          player.seekTo(time, true);
+          if (playing) {
+            player.playVideo();
+          } else {
+            player.pauseVideo();
+          }
+        } catch (_) {}
+      });
+    }
   });
 
   // ─── Call Socket Handlers ────────────────────────────────────────────────
@@ -279,7 +295,7 @@ function setupSocketEvents() {
 function doSync(fn) {
   isSyncing = true;
   fn();
-  setTimeout(() => { isSyncing = false; }, 250);
+  setTimeout(() => { isSyncing = false; }, 1000);
 }
 
 // ─── Infinite Scroll & Feed State ──────────────────────────────────────────
