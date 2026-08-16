@@ -1647,37 +1647,47 @@ const mobNavRoom = document.getElementById('mob-nav-room');
 const mobNavChat = document.getElementById('mob-nav-chat');
 const mobNavUsers = document.getElementById('mob-nav-users');
 
+// Her öneri: metin + sabit YouTube thumbnail
 const initialMobileSuggestions = [
-  'galatasaray çorum',
-  'ataberk doğan',
-  'izliyor',
-  'wegh',
-  'yapay zeka',
-  'jahrein cenk bey',
-  'guldur guldur show',
-  'fenerbahçe maç özeti',
-  'kısmetse olur 4 sezon',
-  'trabzonspor',
-  'yıldız tilbe',
-  'müslüm gürses',
-  'erkan kolçak köstendil',
-  'valorant fps arttırma unlost'
+  { text: 'galatasaray çorum',            thumb: 'https://i.ytimg.com/vi/09R8_2nJtjg/default.jpg' },
+  { text: 'ataberk doğan',                thumb: 'https://i.ytimg.com/vi/dQw4w9WgXcQ/default.jpg' },
+  { text: 'izliyor',                      thumb: 'https://i.ytimg.com/vi/kJQP7kiw5Fk/default.jpg' },
+  { text: 'wegh',                         thumb: 'https://i.ytimg.com/vi/fJ9rUzIMcZQ/default.jpg' },
+  { text: 'yapay zeka',                   thumb: 'https://i.ytimg.com/vi/JGwWNGJdvx8/default.jpg' },
+  { text: 'jahrein cenk bey',             thumb: 'https://i.ytimg.com/vi/OPf0YbXqDm0/default.jpg' },
+  { text: 'guldur guldur show',           thumb: 'https://i.ytimg.com/vi/RgKAFK5djSk/default.jpg' },
+  { text: 'fenerbahçe maç özeti',         thumb: 'https://i.ytimg.com/vi/hT_nvWreIhg/default.jpg' },
+  { text: 'kısmetse olur 4 sezon',        thumb: 'https://i.ytimg.com/vi/CevxZvSJLk8/default.jpg' },
+  { text: 'trabzonspor',                  thumb: 'https://i.ytimg.com/vi/uelHwf8o7_U/default.jpg' },
+  { text: 'yıldız tilbe',                 thumb: 'https://i.ytimg.com/vi/YQHsXMglC9A/default.jpg' },
+  { text: 'müslüm gürses',                thumb: 'https://i.ytimg.com/vi/9bZkp7q19f0/default.jpg' },
+  { text: 'erkan kolçak köstendil',       thumb: 'https://i.ytimg.com/vi/OPf0YbXqDm0/default.jpg' },
+  { text: 'valorant fps arttırma unlost', thumb: 'https://i.ytimg.com/vi/09R8_2nJtjg/default.jpg' }
 ];
 
 function renderMobileSearchSuggestions(items) {
   if (!mobSearchSuggestionsList) return;
   mobSearchSuggestionsList.innerHTML = '';
 
-  items.forEach(text => {
+  items.forEach(entry => {
+    const text  = typeof entry === 'string' ? entry : entry.text;
+    const thumb = typeof entry === 'string' ? '' : (entry.thumb || '');
+
     const item = document.createElement('div');
     item.className = 'mob-suggest-item';
     item.innerHTML = `
       <div class="mob-suggest-icon">
-        <svg viewBox="0 0 24 24" width="20" height="20"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"></path></svg>
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="#aaa">
+          <path d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9z"/>
+        </svg>
       </div>
       <div class="mob-suggest-text">${escapeHtml(text)}</div>
+      ${thumb
+        ? `<img class="mob-suggest-thumb" src="${escapeHtml(thumb)}" alt="" onerror="this.style.display='none'">`
+        : `<div class="mob-suggest-thumb-placeholder"></div>`
+      }
       <div class="mob-suggest-arrow">
-        <svg viewBox="0 0 24 24" width="18" height="18"><path d="M9 5v2h6.59L4 18.59 5.41 20 17 8.41V15h2V5z"></path></svg>
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="#aaa"><path d="M9 5v2h6.59L4 18.59 5.41 20 17 8.41V15h2V5z"></path></svg>
       </div>
     `;
 
@@ -1686,7 +1696,6 @@ function renderMobileSearchSuggestions(items) {
       searchInput.value = text;
       openFeedView();
       fetchAndRenderFeed(text);
-      showToast(`Aranıyor: "${text}" 🔍`);
     });
 
     mobSearchSuggestionsList.appendChild(item);
@@ -1728,9 +1737,12 @@ if (mobSearchInput) {
       return;
     }
 
-    const filtered = initialMobileSuggestions.filter(s => s.toLowerCase().includes(val));
-    if (!filtered.includes(val)) {
-      filtered.unshift(val);
+    // Mevcut önerileri filtrele (obje formatında)
+    const filtered = initialMobileSuggestions.filter(s => s.text.toLowerCase().includes(val));
+    // Tam eşleşme yoksa kullanıcının yazdığını başa ekle (thumb yok)
+    const hasExact = filtered.some(s => s.text.toLowerCase() === val);
+    if (!hasExact) {
+      filtered.unshift({ text: val, thumb: suggestionThumbCache.get(val) || '' });
     }
     renderMobileSearchSuggestions(filtered);
   });

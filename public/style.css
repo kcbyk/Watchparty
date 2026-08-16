@@ -2351,3 +2351,9 @@ svg {
   object-fit: cover;
   flex-shrink: 0;
 }
+
+.mob-suggest-thumb-placeholder {
+  width: 52px;
+  height: 30px;
+  flex-shrink: 0;
+}
