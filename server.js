@@ -51,10 +51,20 @@ app.get('/api/new-room', (req, res) => {
 });
 
 // ─── Ultra-Fast Multi-Engine YouTube Search & In-Memory Cache ────────────────
-const YOUTUBE_API_KEYS = [
+const defaultKeys = [
   'AIzaSyBAGhhAJrcy8SElpcZqv2autfI6wWMQbvI',
   'AIzaSyBW6k17K4LC24XLfiDjP37Hlx2cBexyztc'
 ];
+
+let envKeys = [];
+if (process.env.YOUTUBE_API_KEY) {
+  envKeys.push(...process.env.YOUTUBE_API_KEY.split(',').map(k => k.trim()).filter(Boolean));
+}
+if (process.env.YOUTUBE_API_KEY_2) {
+  envKeys.push(process.env.YOUTUBE_API_KEY_2.trim());
+}
+
+const YOUTUBE_API_KEYS = envKeys.length > 0 ? envKeys : defaultKeys;
 let currentApiKeyIndex = 0;
 
 function getActiveApiKey() {
