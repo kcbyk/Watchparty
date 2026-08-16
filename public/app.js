@@ -1633,7 +1633,30 @@ if (btnLeaveRoom) {
   });
 }
 
- text: 'fenerbahçe maç özeti',         thumb: 'https://i.ytimg.com/vi/hT_nvWreIhg/default.jpg' },
+// ─── Mobile Full-Screen Search & Suggestions (YouTube Mobile Style) ────────
+const mobileSearchTriggerBtn = document.getElementById('mobile-search-trigger-btn');
+const mobileSearchOverlay = document.getElementById('mobile-search-overlay');
+const mobSearchInput = document.getElementById('mob-search-input');
+const mobSearchCloseBtn = document.getElementById('mob-search-close-btn');
+const mobSearchClearBtn = document.getElementById('mob-search-clear-btn');
+const mobSearchSuggestionsList = document.getElementById('mob-search-suggestions-list');
+
+// Mobile Bottom Nav
+const mobNavHome = document.getElementById('mob-nav-home');
+const mobNavRoom = document.getElementById('mob-nav-room');
+const mobNavChat = document.getElementById('mob-nav-chat');
+const mobNavUsers = document.getElementById('mob-nav-users');
+
+// Her öneri: metin + sabit YouTube thumbnail
+const initialMobileSuggestions = [
+  { text: 'galatasaray çorum',            thumb: 'https://i.ytimg.com/vi/09R8_2nJtjg/default.jpg' },
+  { text: 'ataberk doğan',                thumb: 'https://i.ytimg.com/vi/dQw4w9WgXcQ/default.jpg' },
+  { text: 'izliyor',                      thumb: 'https://i.ytimg.com/vi/kJQP7kiw5Fk/default.jpg' },
+  { text: 'wegh',                         thumb: 'https://i.ytimg.com/vi/fJ9rUzIMcZQ/default.jpg' },
+  { text: 'yapay zeka',                   thumb: 'https://i.ytimg.com/vi/JGwWNGJdvx8/default.jpg' },
+  { text: 'jahrein cenk bey',             thumb: 'https://i.ytimg.com/vi/OPf0YbXqDm0/default.jpg' },
+  { text: 'guldur guldur show',           thumb: 'https://i.ytimg.com/vi/RgKAFK5djSk/default.jpg' },
+  { text: 'fenerbahçe maç özeti',         thumb: 'https://i.ytimg.com/vi/hT_nvWreIhg/default.jpg' },
   { text: 'kısmetse olur 4 sezon',        thumb: 'https://i.ytimg.com/vi/CevxZvSJLk8/default.jpg' },
   { text: 'trabzonspor',                  thumb: 'https://i.ytimg.com/vi/uelHwf8o7_U/default.jpg' },
   { text: 'yıldız tilbe',                 thumb: 'https://i.ytimg.com/vi/YQHsXMglC9A/default.jpg' },
