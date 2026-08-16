@@ -1,57 +1,65 @@
 // ══════════════════════════════════════════════════════════════════════════════
-// WatchParty SQLite High-Performance Persistence Layer
+// WatchParty SQLite High-Performance Persistence Layer (with In-Memory Fallback)
 // ══════════════════════════════════════════════════════════════════════════════
-const Database = require('better-sqlite3');
 const path = require('path');
+let Database;
+let db = null;
+let useFallback = false;
 
-const dbPath = path.join(__dirname, 'watchparty.sqlite');
-const db = new Database(dbPath);
+try {
+  Database = require('better-sqlite3');
+  const dbPath = path.join(__dirname, 'watchparty.sqlite');
+  db = new Database(dbPath);
 
-// Enable WAL (Write-Ahead Logging) mode for lightning-fast concurrent reads & writes
-db.pragma('journal_mode = WAL');
-db.pragma('synchronous = NORMAL');
+  // Enable WAL (Write-Ahead Logging) mode for lightning-fast concurrent reads & writes
+  db.pragma('journal_mode = WAL');
+  db.pragma('synchronous = NORMAL');
 
-// ─── Initialize Tables ───────────────────────────────────────────────────────
-db.exec(`
-  CREATE TABLE IF NOT EXISTS rooms (
-    id TEXT PRIMARY KEY,
-    current_video TEXT,
-    video_state TEXT,
-    queue TEXT,
-    created_at INTEGER,
-    updated_at INTEGER
-  );
+  // ─── Initialize Tables ───────────────────────────────────────────────────────
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS rooms (
+      id TEXT PRIMARY KEY,
+      current_video TEXT,
+      video_state TEXT,
+      queue TEXT,
+      created_at INTEGER,
+      updated_at INTEGER
+    );
 
-  CREATE TABLE IF NOT EXISTS messages (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    room_id TEXT NOT NULL,
-    user TEXT,
-    text TEXT NOT NULL,
-    type TEXT DEFAULT 'user',
-    created_at INTEGER
-  );
+    CREATE TABLE IF NOT EXISTS messages (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      room_id TEXT NOT NULL,
+      user TEXT,
+      text TEXT NOT NULL,
+      type TEXT DEFAULT 'user',
+      created_at INTEGER
+    );
 
-  CREATE TABLE IF NOT EXISTS search_cache (
-    cache_key TEXT PRIMARY KEY,
-    query TEXT,
-    results_json TEXT,
-    created_at INTEGER
-  );
+    CREATE TABLE IF NOT EXISTS search_cache (
+      cache_key TEXT PRIMARY KEY,
+      query TEXT,
+      results_json TEXT,
+      created_at INTEGER
+    );
 
-  CREATE TABLE IF NOT EXISTS liked_videos (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_name TEXT,
-    video_id TEXT,
-    video_json TEXT,
-    created_at INTEGER
-  );
+    CREATE TABLE IF NOT EXISTS liked_videos (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_name TEXT,
+      video_id TEXT,
+      video_json TEXT,
+      created_at INTEGER
+    );
 
-  CREATE INDEX IF NOT EXISTS idx_messages_room ON messages(room_id);
-  CREATE INDEX IF NOT EXISTS idx_search_key ON search_cache(cache_key);
-`);
+    CREATE INDEX IF NOT EXISTS idx_messages_room ON messages(room_id);
+    CREATE INDEX IF NOT EXISTS idx_search_key ON search_cache(cache_key);
+  `);
+} catch (err) {
+  console.warn('[Database Warning] SQLite native module could not be initialized, switching to memory storage:', err.message);
+  useFallback = true;
+}
 
 // ─── Prepared Statements for Max Speed ───────────────────────────────────────
-const stmts = {
+const stmts = db ? {
   getRoom: db.prepare('SELECT * FROM rooms WHERE id = ?'),
   upsertRoom: db.prepare(`
     INSERT INTO rooms (id, current_video, video_state, queue, created_at, updated_at)
@@ -88,12 +96,22 @@ const stmts = {
       created_at = excluded.created_at
   `),
   cleanOldSearchCache: db.prepare('DELETE FROM search_cache WHERE created_at < ?')
-};
+} : null;
 
 // ─── Exported DB Helper Methods ──────────────────────────────────────────────
+const memoryStore = {
+  rooms: new Map(),
+  messages: new Map(),
+  cache: new Map()
+};
+
 module.exports = {
   // Room persistence
   saveRoom(roomId, roomData) {
+    if (!stmts) {
+      memoryStore.rooms.set(roomId, roomData);
+      return;
+    }
     try {
       const currentVideo = roomData.currentVideo ? JSON.stringify(roomData.currentVideo) : null;
       const videoState = roomData.videoState ? JSON.stringify(roomData.videoState) : null;
@@ -106,6 +124,9 @@ module.exports = {
   },
 
   loadAllRooms() {
+    if (!stmts) {
+      return memoryStore.rooms;
+    }
     try {
       const rows = stmts.getAllRooms.all();
       const loaded = new Map();
@@ -127,6 +148,11 @@ module.exports = {
 
   // Message persistence
   saveMessage(roomId, msg) {
+    if (!stmts) {
+      if (!memoryStore.messages.has(roomId)) memoryStore.messages.set(roomId, []);
+      memoryStore.messages.get(roomId).push(msg);
+      return;
+    }
     try {
       stmts.addMessage.run(roomId, msg.user || null, msg.text || '', msg.type || 'user', msg.time || Date.now());
     } catch (e) {
@@ -135,6 +161,9 @@ module.exports = {
   },
 
   getRecentMessages(roomId) {
+    if (!stmts) {
+      return memoryStore.messages.get(roomId) || [];
+    }
     try {
       return stmts.getRoomMessages.all(roomId);
     } catch (e) {
@@ -145,6 +174,11 @@ module.exports = {
 
   // Search cache persistence
   getCachedSearch(key, maxAgeMs = 3 * 24 * 60 * 60 * 1000) { // 3 days cache
+    if (!stmts) {
+      const item = memoryStore.cache.get(key);
+      if (!item || Date.now() - item.time > maxAgeMs) return null;
+      return item.data;
+    }
     try {
       const row = stmts.getSearchCache.get(key);
       if (!row) return null;
@@ -156,8 +190,12 @@ module.exports = {
   },
 
   setCachedSearch(key, query, results) {
+    if (!Array.isArray(results) || results.length === 0) return;
+    if (!stmts) {
+      memoryStore.cache.set(key, { time: Date.now(), data: results });
+      return;
+    }
     try {
-      if (!Array.isArray(results) || results.length === 0) return;
       stmts.setSearchCache.run(key, query, JSON.stringify(results), Date.now());
     } catch (e) {
       console.warn('[DB setSearchCache Error]', e.message);

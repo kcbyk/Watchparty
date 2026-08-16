@@ -78,30 +78,45 @@ function initRoom() {
   const paramUser = urlParams.get('user');
 
   if (paramUser) username = paramUser;
-  usernameInput.value = username;
-  userAvatarBadge.textContent = username.charAt(0).toUpperCase();
-  userAvatarBadge.style.backgroundColor = getAvatarColor(username);
+  if (usernameInput) usernameInput.value = username;
+  if (userAvatarBadge) {
+    userAvatarBadge.textContent = username.charAt(0).toUpperCase();
+    userAvatarBadge.style.backgroundColor = getAvatarColor(username);
+  }
 
-  socket = io();
+  // Fallback initial room code so UI never gets stuck at "BAĞLANIYOR"
+  const defaultRoomCode = paramRoom ? paramRoom.toUpperCase() : generateNewRoomCode();
+  roomId = defaultRoomCode;
+  if (roomCodeDisplay) roomCodeDisplay.textContent = roomId;
 
-  if (paramRoom) {
-    roomId = paramRoom.toUpperCase();
-    joinRoom(roomId, username);
-  } else {
-    // Fetch a new room ID
+  try {
+    socket = io({
+      transports: ['websocket', 'polling'],
+      reconnectionAttempts: 10,
+      timeout: 10000
+    });
+
+    socket.on('connect', () => {
+      joinRoom(roomId, username);
+    });
+
+    setupSocketEvents();
+  } catch (err) {
+    console.warn('[Socket Connection Warning]', err);
+  }
+
+  // Update room code from server if no room in query
+  if (!paramRoom) {
     fetch('/api/new-room')
       .then(res => res.json())
       .then(data => {
-        roomId = data.roomId;
-        joinRoom(roomId, username);
+        if (data && data.roomId && data.roomId !== roomId) {
+          roomId = data.roomId;
+          joinRoom(roomId, username);
+        }
       })
-      .catch(() => {
-        roomId = 'MAIN01';
-        joinRoom(roomId, username);
-      });
+      .catch(() => {});
   }
-
-  setupSocketEvents();
 }
 
 function joinRoom(rId, uName) {
