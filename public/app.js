@@ -947,62 +947,68 @@ let callDurationSeconds = 0;
 let isDraggingCallWindow = false;
 let dragStartX, dragStartY, initialLeft, initialTop;
 
-callWindowHeader.addEventListener('pointerdown', (e) => {
-  if (e.target.closest('.call-win-btn')) return; // Ignore buttons
-  isDraggingCallWindow = true;
+if (callWindowHeader) {
+  callWindowHeader.addEventListener('pointerdown', (e) => {
+    if (e.target.closest('.call-win-btn')) return; // Ignore buttons
+    isDraggingCallWindow = true;
 
-  const rect = activeCallOverlay.getBoundingClientRect();
-  dragStartX = e.clientX;
-  dragStartY = e.clientY;
-  initialLeft = rect.left;
-  initialTop = rect.top;
+    const rect = activeCallOverlay.getBoundingClientRect();
+    dragStartX = e.clientX;
+    dragStartY = e.clientY;
+    initialLeft = rect.left;
+    initialTop = rect.top;
 
-  // Set explicit left/top so bottom/right don't interfere
-  activeCallOverlay.style.left = `${initialLeft}px`;
-  activeCallOverlay.style.top = `${initialTop}px`;
-  activeCallOverlay.style.right = 'auto';
-  activeCallOverlay.style.bottom = 'auto';
+    // Set explicit left/top so bottom/right don't interfere
+    activeCallOverlay.style.left = `${initialLeft}px`;
+    activeCallOverlay.style.top = `${initialTop}px`;
+    activeCallOverlay.style.right = 'auto';
+    activeCallOverlay.style.bottom = 'auto';
 
-  callWindowHeader.setPointerCapture(e.pointerId);
-});
+    callWindowHeader.setPointerCapture(e.pointerId);
+  });
 
-callWindowHeader.addEventListener('pointermove', (e) => {
-  if (!isDraggingCallWindow) return;
-  const dx = e.clientX - dragStartX;
-  const dy = e.clientY - dragStartY;
+  callWindowHeader.addEventListener('pointermove', (e) => {
+    if (!isDraggingCallWindow) return;
+    const dx = e.clientX - dragStartX;
+    const dy = e.clientY - dragStartY;
 
-  const winW = window.innerWidth;
-  const winH = window.innerHeight;
-  const overlayW = activeCallOverlay.offsetWidth;
-  const overlayH = activeCallOverlay.offsetHeight;
+    const winW = window.innerWidth;
+    const winH = window.innerHeight;
+    const overlayW = activeCallOverlay.offsetWidth;
+    const overlayH = activeCallOverlay.offsetHeight;
 
-  const newLeft = Math.max(10, Math.min(winW - overlayW - 10, initialLeft + dx));
-  const newTop = Math.max(65, Math.min(winH - overlayH - 10, initialTop + dy));
+    const newLeft = Math.max(10, Math.min(winW - overlayW - 10, initialLeft + dx));
+    const newTop = Math.max(65, Math.min(winH - overlayH - 10, initialTop + dy));
 
-  activeCallOverlay.style.left = `${newLeft}px`;
-  activeCallOverlay.style.top = `${newTop}px`;
-});
+    activeCallOverlay.style.left = `${newLeft}px`;
+    activeCallOverlay.style.top = `${newTop}px`;
+  });
 
-callWindowHeader.addEventListener('pointerup', (e) => {
-  isDraggingCallWindow = false;
-  try { callWindowHeader.releasePointerCapture(e.pointerId); } catch (_) {}
-});
+  callWindowHeader.addEventListener('pointerup', (e) => {
+    isDraggingCallWindow = false;
+    try { callWindowHeader.releasePointerCapture(e.pointerId); } catch (_) {}
+  });
+}
 
 // Minimize / Maximize Window
-callMinimizeBtn.addEventListener('click', () => {
-  const isMin = activeCallOverlay.classList.toggle('minimized');
-  if (isMin) {
-    minMaxIcon.innerHTML = '<path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14z"></path>';
-  } else {
-    minMaxIcon.innerHTML = '<path d="M19 13H5v-2h14v2z"></path>';
-  }
-});
+if (callMinimizeBtn) {
+  callMinimizeBtn.addEventListener('click', () => {
+    const isMin = activeCallOverlay.classList.toggle('minimized');
+    if (isMin) {
+      if (minMaxIcon) minMaxIcon.innerHTML = '<path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14z"></path>';
+    } else {
+      if (minMaxIcon) minMaxIcon.innerHTML = '<path d="M19 13H5v-2h14v2z"></path>';
+    }
+  });
+}
 
 // Hide Window (continues in background)
-callHideBtn.addEventListener('click', () => {
-  activeCallOverlay.classList.remove('active');
-  showToast('Sesli görüşme devam ediyor. Sol menüdeki "Görüşme" butonundan açabilirsiniz.');
-});
+if (callHideBtn) {
+  callHideBtn.addEventListener('click', () => {
+    if (activeCallOverlay) activeCallOverlay.classList.remove('active');
+    showToast('Sesli görüşme devam ediyor. Sol menüdeki "Görüşme" butonundan açabilirsiniz.');
+  });
+}
 
 // Call Timer functions
 function startCallTimer() {
