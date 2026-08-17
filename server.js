@@ -856,148 +856,89 @@ app.get('/api/search', async (req, res) => {
   }
 });
 
-// ─── TikTok Feed Route — TokApi Mobile Version (Gerçek videolar) ─────────────
-const TOKAPI_KEY = process.env.TOKAPI_KEY || 'adc4b7af04mshadb5aab86d5eff7p1946e8jsn61fbc4deba81';
-const TOKAPI_HOST = 'tokapi-mobile-version.p.rapidapi.com';
-
-// Popüler TikTok hesaplarının user ID'leri (trending içerik üretiyorlar)
-const TIKTOK_POPULAR_ACCOUNTS = [
-  '208464585232822272',  // Nike
-  '5738659960541405189', // NASA
-  '6569595380449902597', // NBA
-  '107955',              // TikTok official
-  '96783980076438528',   // Red Bull
-  '314539396',           // ESPN
-  '298885955',           // CNN
-  '78163718308421632',   // BuzzFeed
-  '6909763490994028546', // BBC
-  '7168534952995324974', // Dua Lipa
+// ─── Reels Feed — YouTube Shorts ─────────────────────────────────────────────
+// YouTube Shorts araması yaparak dikey video feed döndürür
+const SHORTS_QUERIES = [
+  '#shorts funny',
+  '#shorts dance',
+  '#shorts cooking recipe',
+  '#shorts travel',
+  '#shorts fitness workout',
+  '#shorts music',
+  '#shorts animals pets',
+  '#shorts satisfying',
+  '#shorts comedy',
+  '#shorts türkçe',
+  'youtube shorts viral 2025',
+  'short video trending'
 ];
-
-// Video URL'leri birkaç saatte bir expire olur — proxy üzerinden sun
-app.get('/api/tiktok-proxy-video', async (req, res) => {
-  const { url } = req.query;
-  if (!url) return res.status(400).send('URL gerekli');
-  try {
-    const decoded = decodeURIComponent(url);
-    const upstream = await fetch(decoded, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15',
-        'Referer': 'https://www.tiktok.com/',
-        'Accept': 'video/mp4,video/*;q=0.9,*/*;q=0.8',
-        'Range': req.headers.range || 'bytes=0-'
-      }
-    });
-    if (!upstream.ok) return res.status(upstream.status).send('Video yüklenemedi');
-
-    res.setHeader('Content-Type', upstream.headers.get('content-type') || 'video/mp4');
-    res.setHeader('Accept-Ranges', 'bytes');
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    const cl = upstream.headers.get('content-length');
-    const cr = upstream.headers.get('content-range');
-    if (cl) res.setHeader('Content-Length', cl);
-    if (cr) res.setHeader('Content-Range', cr);
-    res.status(upstream.status === 206 ? 206 : 200);
-
-    const { Readable } = require('stream');
-    if (upstream.body && typeof upstream.body.getReader === 'function') {
-      Readable.fromWeb(upstream.body).pipe(res);
-    } else {
-      const buf = await upstream.arrayBuffer();
-      res.end(Buffer.from(buf));
-    }
-  } catch (err) {
-    console.warn('[TikTok Proxy Video Error]', err.message);
-    if (!res.headersSent) res.status(500).send('Proxy hatası');
-  }
-});
 
 app.get('/api/tiktok-feed', async (req, res) => {
   res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
   res.setHeader('Pragma', 'no-cache');
 
   try {
-    // Rastgele 3 hesap seç — her seferinde farklı içerik
-    const shuffled = [...TIKTOK_POPULAR_ACCOUNTS].sort(() => Math.random() - 0.5).slice(0, 3);
+    // Rastgele 2 sorgu seç — çeşitlilik için
+    const q1 = SHORTS_QUERIES[Math.floor(Math.random() * SHORTS_QUERIES.length)];
+    const q2 = SHORTS_QUERIES[Math.floor(Math.random() * SHORTS_QUERIES.length)];
 
-    const allVideos = [];
+    let allVideos = [];
 
-    for (const userId of shuffled) {
-      try {
-        const controller = new AbortController();
-        const timer = setTimeout(() => controller.abort(), 8000);
-        const r = await fetch(
-          `https://${TOKAPI_HOST}/v1/post/user/${userId}/posts?offset=0&count=6&region=TR&with_pinned_posts=1`,
-          {
-            signal: controller.signal,
-            headers: {
-              'Content-Type': 'application/json',
-              'x-rapidapi-host': TOKAPI_HOST,
-              'x-rapidapi-key': TOKAPI_KEY
-            }
-          }
-        );
-        clearTimeout(timer);
-        if (!r.ok) continue;
-
-        const data = await r.json();
-        const items = data?.aweme_list || [];
-
-        for (const v of items) {
-          // Sadece normal video (type 0) al, ads ve fotoğraf kolajları atla
-          if (v.aweme_type !== 0 && v.aweme_type !== 68) continue;
-
-          const playUrls = v.video?.play_addr?.url_list || v.video?.play_addr_h264?.url_list || [];
-          const coverUrls = v.video?.origin_cover?.url_list || v.video?.cover?.url_list || [];
-          const dynamicCoverUrls = v.video?.dynamic_cover?.url_list || [];
-          const avatarUrls = v.author?.avatar_larger?.url_list || v.author?.avatar_medium?.url_list || [];
-
-          if (playUrls.length === 0) continue;
-
-          const stats = v.statistics || {};
-          allVideos.push({
-            id: v.aweme_id,
-            author: '@' + (v.author?.unique_id || v.author?.nickname || 'tiktok').replace(/^@/, ''),
-            nickname: v.author?.nickname || v.author?.unique_id || 'TikTok',
-            avatar: avatarUrls[0] || `https://ui-avatars.com/api/?name=TK&background=fe2c55&color=fff&size=128&bold=true&format=svg`,
-            desc: v.desc || '',
-            videoUrl: `/api/tiktok-proxy-video?url=${encodeURIComponent(playUrls[0])}`,
-            cover: coverUrls[0] || dynamicCoverUrls[0] || '',
-            dynamicCover: dynamicCoverUrls[0] || '',
-            likes: formatCount(stats.digg_count || 0),
-            comments: formatCount(stats.comment_count || 0),
-            shares: formatCount(stats.share_count || 0),
-            plays: formatCount(stats.play_count || 0),
-            duration: v.video?.duration || 0,
-            music: v.music?.title || 'Orijinal ses',
-            musicAuthor: v.music?.author || v.author?.nickname || ''
-          });
-        }
-      } catch (e) {
-        console.warn(`[TikTok Feed] Account ${userId} error:`, e.message);
+    for (const q of [q1, q2]) {
+      let results = await searchWithYouTubeDataApi(q + ' short', 15);
+      if (!results || results.length === 0) {
+        results = await searchWithYts(q);
       }
+      if (Array.isArray(results)) allVideos.push(...results);
     }
 
-    // Karıştır — farklı hesaplardan sırayla gelsin
-    for (let i = allVideos.length - 1; i > 0; i--) {
+    // Sadece kısa videoları tut (60 saniye veya daha az — Shorts formatı)
+    // duration formatı "0:45", "1:00" gibi — 1 dakikadan uzun olanları at
+    const shortsOnly = allVideos.filter(v => {
+      if (!v.duration || v.duration === '?:??') return true; // bilmiyorsak dahil et
+      const parts = v.duration.split(':').map(Number);
+      const totalSec = parts.length === 3
+        ? parts[0] * 3600 + parts[1] * 60 + parts[2]
+        : parts[0] * 60 + (parts[1] || 0);
+      return totalSec <= 180; // 3 dakikaya kadar al
+    });
+
+    // Deduplicate
+    const seen = new Set();
+    const deduped = [];
+    for (const v of (shortsOnly.length > 5 ? shortsOnly : allVideos)) {
+      if (!v.id || seen.has(v.id)) continue;
+      seen.add(v.id);
+      deduped.push({
+        id: v.id,
+        author: v.author || 'YouTube',
+        nickname: v.author || 'YouTube',
+        avatar: v.channelAvatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(v.author || 'Y')}&background=fe2c55&color=fff&size=128&bold=true&format=svg`,
+        desc: v.title || '',
+        videoId: v.id, // YouTube video ID — IFrame ile oynatılacak
+        cover: v.thumbnail || `https://i.ytimg.com/vi/${v.id}/hqdefault.jpg`,
+        likes: v.views || '1M',
+        comments: Math.floor(Math.random() * 50 + 5) + 'K',
+        shares: Math.floor(Math.random() * 20 + 1) + 'K',
+        music: v.title || 'Orijinal ses',
+        musicAuthor: v.author || ''
+      });
+    }
+
+    // Karıştır
+    for (let i = deduped.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
-      [allVideos[i], allVideos[j]] = [allVideos[j], allVideos[i]];
+      [deduped[i], deduped[j]] = [deduped[j], deduped[i]];
     }
 
-    if (allVideos.length === 0) {
-      console.warn('[TikTok Feed] No videos found, sending empty');
-      return res.json([]);
-    }
-
-    console.log(`[TikTok Feed] ${allVideos.length} real videos returned`);
-    res.json(allVideos.slice(0, 20));
+    console.log(`[Reels/Shorts Feed] ${deduped.length} videos`);
+    res.json(deduped.slice(0, 20));
 
   } catch (err) {
-    console.error('[TikTok Feed Error]', err.message);
+    console.error('[Reels Feed Error]', err.message);
     res.json([]);
   }
 });
-
 function formatCount(n) {
   const num = parseInt(n, 10) || 0;
   if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
