@@ -856,6 +856,89 @@ app.get('/api/search', async (req, res) => {
   }
 });
 
+// ─── TikTok Trending Feed Route ─────────────────────────────────────────────
+// RapidAPI TikTok scraper ile trend videolar — birden fazla endpoint dener
+const TIKTOK_FALLBACK_VIDEOS = [
+  { id: 'tt1', author: '@beingbabish', avatar: 'https://ui-avatars.com/api/?name=BB&background=fe2c55&color=fff&size=128&bold=true&format=svg', desc: 'Nasıl aşçı olunur 🍳 #cooking #food #viral', likes: '2.4M', comments: '18.2K', shares: '142K', cover: 'https://picsum.photos/seed/tt1/400/700', videoUrl: '' },
+  { id: 'tt2', author: '@dancequeen_tr', avatar: 'https://ui-avatars.com/api/?name=DQ&background=25f4ee&color=000&size=128&bold=true&format=svg', desc: 'Yeni dans trendi 💃 #dance #trending #fyp', likes: '5.1M', comments: '43.7K', shares: '290K', cover: 'https://picsum.photos/seed/tt2/400/700', videoUrl: '' },
+  { id: 'tt3', author: '@techbro_daily', avatar: 'https://ui-avatars.com/api/?name=TD&background=6e5494&color=fff&size=128&bold=true&format=svg', desc: 'Bu telefon hilesi hayatımı değiştirdi 📱 #tech #lifehack', likes: '8.9M', comments: '61.4K', shares: '1.2M', cover: 'https://picsum.photos/seed/tt3/400/700', videoUrl: '' },
+  { id: 'tt4', author: '@catvideos_world', avatar: 'https://ui-avatars.com/api/?name=CW&background=f4a261&color=fff&size=128&bold=true&format=svg', desc: 'En sevimli kedi anı 🐱 #cat #cute #pets', likes: '12.3M', comments: '98.1K', shares: '2.4M', cover: 'https://picsum.photos/seed/tt4/400/700', videoUrl: '' },
+  { id: 'tt5', author: '@travelbug_official', avatar: 'https://ui-avatars.com/api/?name=TB&background=2a9d8f&color=fff&size=128&bold=true&format=svg', desc: 'Türkiye\'nin gizli cenneti 🌊 #travel #turkey #explore', likes: '3.7M', comments: '22.9K', shares: '440K', cover: 'https://picsum.photos/seed/tt5/400/700', videoUrl: '' },
+  { id: 'tt6', author: '@comedy_central_tr', avatar: 'https://ui-avatars.com/api/?name=CC&background=e9c46a&color=000&size=128&bold=true&format=svg', desc: 'Komşunun yaptığı şeye bakın 😂 #comedy #funny #lol', likes: '6.2M', comments: '51.8K', shares: '830K', cover: 'https://picsum.photos/seed/tt6/400/700', videoUrl: '' },
+  { id: 'tt7', author: '@fitnessguru_pro', avatar: 'https://ui-avatars.com/api/?name=FG&background=264653&color=fff&size=128&bold=true&format=svg', desc: '30 günde bu değişim 💪 #fitness #gym #motivation', likes: '4.5M', comments: '34.2K', shares: '560K', cover: 'https://picsum.photos/seed/tt7/400/700', videoUrl: '' },
+  { id: 'tt8', author: '@streetfood_istanbul', avatar: 'https://ui-avatars.com/api/?name=SF&background=e76f51&color=fff&size=128&bold=true&format=svg', desc: 'İstanbul\'un en iyi sokak yemeği 🥙 #food #istanbul #streetfood', likes: '9.1M', comments: '74.6K', shares: '1.1M', cover: 'https://picsum.photos/seed/tt8/400/700', videoUrl: '' },
+  { id: 'tt9', author: '@musicmaker_beats', avatar: 'https://ui-avatars.com/api/?name=MM&background=457b9d&color=fff&size=128&bold=true&format=svg', desc: 'Sıfırdan beat yapımı 🎵 #music #producer #hiphop', likes: '1.9M', comments: '15.3K', shares: '210K', cover: 'https://picsum.photos/seed/tt9/400/700', videoUrl: '' },
+  { id: 'tt10', author: '@naturelover_hd', avatar: 'https://ui-avatars.com/api/?name=NL&background=52b788&color=fff&size=128&bold=true&format=svg', desc: 'Doğanın sesi 🌿 #nature #relax #peaceful', likes: '7.4M', comments: '58.9K', shares: '920K', cover: 'https://picsum.photos/seed/tt10/400/700', videoUrl: '' }
+];
+
+app.get('/api/tiktok-feed', async (req, res) => {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+
+  // RapidAPI TikTok endpoints — birden fazla dene
+  const RAPID_KEYS = [
+    'cb858c97a3msh3798faa4195f2c4p1ce356jsnfed9edfcad6f',
+    'bb06a77a1dmshf74916c37643f8ap1e4682jsn88e788cec36a'
+  ];
+  if (process.env.RAPIDAPI_KEY) RAPID_KEYS.unshift(process.env.RAPIDAPI_KEY.trim());
+
+  const endpoints = [
+    { host: 'tiktok-scraper7.p.rapidapi.com', path: '/feed/list?region=TR&count=20' },
+    { host: 'tiktok-api23.p.rapidapi.com', path: '/api/trending?region=TR&count=20' },
+    { host: 'tokapi-mobile-version.p.rapidapi.com', path: '/v1/trending?region=TR&offset=0&count=20' }
+  ];
+
+  for (const key of RAPID_KEYS) {
+    for (const ep of endpoints) {
+      try {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 5000);
+        const r = await fetch(`https://${ep.host}${ep.path}`, {
+          signal: controller.signal,
+          headers: {
+            'x-rapidapi-host': ep.host,
+            'x-rapidapi-key': key
+          }
+        });
+        clearTimeout(timer);
+        if (!r.ok) continue;
+        const raw = await r.json();
+
+        // farklı API'ler farklı yapıda döner — normalize et
+        let items = raw?.data?.videos || raw?.data || raw?.videos || raw?.items || raw?.aweme_list || [];
+        if (!Array.isArray(items) || items.length === 0) continue;
+
+        const normalized = items.slice(0, 20).map((v, i) => {
+          const desc = v.desc || v.title || v.caption || '';
+          const author = v.author?.uniqueId || v.author?.nickname || v.authorMeta?.name || v.user?.unique_id || '@tiktok';
+          const avatar = v.author?.avatarThumb || v.authorMeta?.avatar || v.user?.avatar_thumb?.url_list?.[0] || `https://ui-avatars.com/api/?name=${encodeURIComponent(author)}&background=fe2c55&color=fff&size=128&bold=true&format=svg`;
+          const likes = formatCount(v.stats?.diggCount || v.statistics?.digg_count || v.diggCount || 0);
+          const comments = formatCount(v.stats?.commentCount || v.statistics?.comment_count || v.commentCount || 0);
+          const shares = formatCount(v.stats?.shareCount || v.statistics?.share_count || v.shareCount || 0);
+          const cover = v.video?.cover || v.video?.dynamicCover || v.video?.originCover || v.coverData?.covertUrl || `https://picsum.photos/seed/tk${i}/400/700`;
+          const videoUrl = v.video?.playAddr || v.video?.downloadAddr || v.play_url?.url_list?.[0] || '';
+          return { id: v.id || v.aweme_id || `tk${i}`, author: '@' + author.replace(/^@/, ''), avatar, desc, likes, comments, shares, cover, videoUrl };
+        });
+
+        console.log(`[TikTok Feed] ${normalized.length} video from ${ep.host}`);
+        return res.json(normalized);
+      } catch (e) {
+        console.warn(`[TikTok API Warning] ${ep.host}:`, e.message);
+      }
+    }
+  }
+
+  // Tüm API'ler başarısız → fallback
+  console.warn('[TikTok Feed] All APIs failed, using fallback');
+  res.json(TIKTOK_FALLBACK_VIDEOS);
+});
+
+function formatCount(n) {
+  const num = parseInt(n, 10) || 0;
+  if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+  if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
+  return String(num);
+}
+
 // ─── Real-time YouTube Autocomplete Suggestions Route ───────────────────────
 app.get('/api/suggestions', async (req, res) => {
   const q = (req.query.q || '').trim();

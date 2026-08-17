@@ -2680,3 +2680,379 @@ svg {
   letter-spacing: 0.2px;
   white-space: nowrap;
 }
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   REELS / TIKTOK FULL-SCREEN OVERLAY
+   ══════════════════════════════════════════════════════════════════════════════ */
+
+.reels-overlay {
+  position: fixed;
+  inset: 0;
+  background: #000;
+  z-index: 99999;
+  display: flex;
+  flex-direction: column;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(100%);
+  transition: opacity 0.3s ease, transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+}
+.reels-overlay.active {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+/* ─── Reels Header ────────────────────────────────────────────────────────── */
+.reels-header {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  z-index: 10;
+  background: linear-gradient(to bottom, rgba(0,0,0,0.7) 0%, transparent 100%);
+}
+.reels-close-btn,
+.reels-search-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: transparent;
+  border: none;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.reels-close-btn:hover,
+.reels-search-btn:hover {
+  background: rgba(255,255,255,0.15);
+}
+.reels-header-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: -0.3px;
+}
+
+/* ─── Reels Feed (snap scroll) ───────────────────────────────────────────── */
+.reels-feed {
+  flex: 1;
+  height: 100%;
+  overflow-y: scroll;
+  scroll-snap-type: y mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.reels-feed::-webkit-scrollbar {
+  display: none;
+}
+
+/* ─── Loading State ──────────────────────────────────────────────────────── */
+.reels-loading {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  color: #fff;
+  font-size: 14px;
+}
+.reels-spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid rgba(255,255,255,0.2);
+  border-top-color: #fe2c55;
+  border-radius: 50%;
+  animation: reels-spin 0.75s linear infinite;
+}
+@keyframes reels-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ─── Single Reel Item ───────────────────────────────────────────────────── */
+.reel-item {
+  position: relative;
+  width: 100%;
+  height: 100vh;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+  overflow: hidden;
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Background cover image (when no video) */
+.reel-bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: brightness(0.75);
+  transition: filter 0.3s ease;
+}
+.reel-item.active .reel-bg {
+  filter: brightness(0.6);
+}
+
+/* Play/Pause tap overlay */
+.reel-tap-zone {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  cursor: pointer;
+}
+
+/* Play icon shown on pause */
+.reel-play-icon {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0);
+  width: 72px;
+  height: 72px;
+  background: rgba(0,0,0,0.55);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 4;
+  pointer-events: none;
+  transition: transform 0.15s ease, opacity 0.15s ease;
+  opacity: 0;
+}
+.reel-play-icon.show {
+  transform: translate(-50%, -50%) scale(1);
+  opacity: 1;
+}
+.reel-play-icon svg {
+  fill: #fff;
+}
+
+/* ─── Right Action Buttons (TikTok style) ────────────────────────────────── */
+.reel-actions {
+  position: absolute;
+  right: 12px;
+  bottom: 100px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  z-index: 5;
+}
+.reel-action-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  background: transparent;
+  border: none;
+  color: #fff;
+  cursor: pointer;
+  padding: 0;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.reel-action-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.15);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+.reel-action-btn:active .reel-action-icon {
+  transform: scale(0.88);
+}
+.reel-action-btn.liked .reel-action-icon {
+  background: rgba(254, 44, 85, 0.35);
+}
+.reel-action-btn.liked svg {
+  fill: #fe2c55;
+}
+.reel-action-count {
+  font-size: 11px;
+  font-weight: 600;
+  color: #fff;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.8);
+  letter-spacing: 0.2px;
+}
+
+/* Avatar button in actions */
+.reel-avatar-wrap {
+  position: relative;
+  margin-bottom: 4px;
+}
+.reel-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #fff;
+  display: block;
+}
+.reel-follow-dot {
+  position: absolute;
+  bottom: -4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 18px;
+  height: 18px;
+  background: #fe2c55;
+  border-radius: 50%;
+  border: 2px solid #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.reel-follow-dot svg {
+  fill: #fff;
+  width: 10px;
+  height: 10px;
+}
+
+/* ─── Bottom Info Overlay ────────────────────────────────────────────────── */
+.reel-info {
+  position: absolute;
+  left: 12px;
+  right: 72px;
+  bottom: 24px;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.reel-author {
+  font-size: 15px;
+  font-weight: 700;
+  color: #fff;
+  text-shadow: 0 1px 6px rgba(0,0,0,0.8);
+  letter-spacing: -0.2px;
+}
+.reel-desc {
+  font-size: 13px;
+  color: rgba(255,255,255,0.9);
+  line-height: 1.45;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.8);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.reel-music-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 2px;
+}
+.reel-music-icon {
+  width: 16px;
+  height: 16px;
+  color: #fff;
+  animation: reel-music-spin 3s linear infinite;
+  flex-shrink: 0;
+}
+@keyframes reel-music-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+.reel-music-text {
+  font-size: 12px;
+  color: rgba(255,255,255,0.85);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.8);
+}
+
+/* ─── TikTok logo watermark ──────────────────────────────────────────────── */
+.reel-tiktok-badge {
+  position: absolute;
+  top: 62px;
+  right: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(0,0,0,0.45);
+  backdrop-filter: blur(6px);
+  border-radius: 14px;
+  padding: 4px 10px 4px 6px;
+  z-index: 5;
+}
+.reel-tiktok-badge svg {
+  width: 18px;
+  height: 18px;
+}
+.reel-tiktok-badge span {
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 0.5px;
+}
+
+/* ─── Progress Bar ───────────────────────────────────────────────────────── */
+.reel-progress {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: rgba(255,255,255,0.2);
+  z-index: 6;
+}
+.reel-progress-bar {
+  height: 100%;
+  background: #fe2c55;
+  width: 0%;
+  transition: width 0.3s linear;
+}
+
+/* ─── No more content state ─────────────────────────────────────────────── */
+.reels-end-card {
+  height: 100vh;
+  scroll-snap-align: start;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  color: #fff;
+  background: #0a0a0a;
+}
+.reels-end-card svg {
+  opacity: 0.4;
+}
+.reels-end-card p {
+  font-size: 14px;
+  color: rgba(255,255,255,0.5);
+}
+.reels-reload-btn {
+  margin-top: 8px;
+  padding: 10px 28px;
+  background: #fe2c55;
+  border: none;
+  border-radius: 20px;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+.reels-reload-btn:hover {
+  opacity: 0.88;
+}

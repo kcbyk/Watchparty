@@ -492,6 +492,29 @@
   <!-- Toast Notification -->
   <div class="yt-toast" id="toast">Bildirim</div>
 
+  <!-- ═══════════════════════════════════════════════════════════ REELS / TIKTOK VIEW -->
+  <div class="reels-overlay" id="reels-overlay">
+    <!-- Header -->
+    <div class="reels-header">
+      <button class="reels-close-btn" id="reels-close-btn">
+        <svg viewBox="0 0 24 24" width="24" height="24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"></path></svg>
+      </button>
+      <span class="reels-header-title">Reels</span>
+      <button class="reels-search-btn" id="reels-search-btn">
+        <svg viewBox="0 0 24 24" width="22" height="22"><path d="M20.87 20.17l-5.59-5.59C16.35 13.35 17 11.75 17 10c0-3.87-3.13-7-7-7s-7 3.13-7 7 3.13 7 7 7c1.75 0 3.35-.65 4.58-1.71l5.59 5.59.7-.71zM10 16c-3.31 0-6-2.69-6-6s2.69-6 6-6 6 2.69 6 6-2.69 6-6 6z"></path></svg>
+      </button>
+    </div>
+
+    <!-- Video Feed Container (snap scroll) -->
+    <div class="reels-feed" id="reels-feed">
+      <!-- Reels items injected dynamically -->
+      <div class="reels-loading" id="reels-loading">
+        <div class="reels-spinner"></div>
+        <span>Yükleniyor...</span>
+      </div>
+    </div>
+  </div>
+
   <!-- ═══════════════════════════════════════════════════════════ DOWNLOAD MODAL -->
   <div class="modal-overlay" id="download-modal">
     <div class="modal-card" style="max-width: 420px;">

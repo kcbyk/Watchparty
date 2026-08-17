@@ -2483,11 +2483,7 @@ if (mobNavReels) {
   mobNavReels.addEventListener('click', () => {
     document.querySelectorAll('.mobile-nav-item').forEach(i => i.classList.remove('active'));
     mobNavReels.classList.add('active');
-    usersDrawer.classList.remove('open');
-    chatDrawer.classList.remove('open');
-    openFeedView();
-    fetchAndRenderFeed('short reels kısa video');
-    showToast('Reels yükleniyor...');
+    openReelsView();
   });
 }
 
@@ -2844,5 +2840,247 @@ if ('serviceWorker' in navigator) {
         console.warn('[PWA] Service Worker registration failed:', err);
       });
   });
+}
+
+// ─── Reels / TikTok View ────────────────────────────────────────────────────
+const reelsOverlay = document.getElementById('reels-overlay');
+const reelsFeed = document.getElementById('reels-feed');
+const reelsCloseBtn = document.getElementById('reels-close-btn');
+
+let reelsVideos = [];
+let reelsLoaded = false;
+let reelsLikedSet = new Set();
+
+function openReelsView() {
+  usersDrawer.classList.remove('open');
+  chatDrawer.classList.remove('open');
+  if (reelsOverlay) {
+    reelsOverlay.classList.add('active');
+    document.body.style.overflow = 'hidden';
+  }
+  if (!reelsLoaded) {
+    loadReelsFeed();
+  }
+}
+
+function closeReelsView() {
+  if (reelsOverlay) {
+    reelsOverlay.classList.remove('active');
+    document.body.style.overflow = '';
+  }
+  // Nav butonunu sıfırla
+  document.querySelectorAll('.mobile-nav-item').forEach(i => i.classList.remove('active'));
+  const mobNavHomeBtn = document.getElementById('mob-nav-home');
+  if (mobNavHomeBtn) mobNavHomeBtn.classList.add('active');
+}
+
+if (reelsCloseBtn) {
+  reelsCloseBtn.addEventListener('click', closeReelsView);
+}
+
+async function loadReelsFeed() {
+  if (!reelsFeed) return;
+  reelsFeed.innerHTML = '<div class="reels-loading" id="reels-loading"><div class="reels-spinner"></div><span>Yükleniyor...</span></div>';
+
+  try {
+    const res = await fetch('/api/tiktok-feed');
+    const videos = await res.json();
+    if (Array.isArray(videos) && videos.length > 0) {
+      reelsVideos = videos;
+      renderReelsFeed(videos);
+      reelsLoaded = true;
+    } else {
+      showReelsError();
+    }
+  } catch (err) {
+    console.warn('[Reels] Fetch error:', err);
+    showReelsError();
+  }
+}
+
+function showReelsError() {
+  if (!reelsFeed) return;
+  reelsFeed.innerHTML = `
+    <div class="reels-end-card">
+      <svg viewBox="0 0 24 24" width="56" height="56" fill="#fff"><path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H8V4h12v12zM12 5.5v9l6-4.5z"></path></svg>
+      <p>Videolar yüklenemedi</p>
+      <button class="reels-reload-btn" onclick="reelsLoaded=false; loadReelsFeed()">Tekrar Dene</button>
+    </div>
+  `;
+}
+
+function renderReelsFeed(videos) {
+  if (!reelsFeed) return;
+  reelsFeed.innerHTML = '';
+
+  videos.forEach((v, idx) => {
+    const item = document.createElement('div');
+    item.className = 'reel-item';
+    item.setAttribute('data-idx', idx);
+
+    const isLiked = reelsLikedSet.has(v.id);
+
+    item.innerHTML = `
+      <img class="reel-bg" src="${escapeHtml(v.cover)}" alt="${escapeHtml(v.desc)}" loading="${idx < 3 ? 'eager' : 'lazy'}">
+      
+      <!-- TikTok badge -->
+      <div class="reel-tiktok-badge">
+        <svg viewBox="0 0 24 24" fill="#fff"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34l-.07-8.2a8.17 8.17 0 004.79 1.54V5.2a4.85 4.85 0 01-1-.51z"/></svg>
+        <span>TikTok</span>
+      </div>
+
+      <!-- Tap zone -->
+      <div class="reel-tap-zone"></div>
+
+      <!-- Play icon -->
+      <div class="reel-play-icon">
+        <svg viewBox="0 0 24 24" width="36" height="36"><path d="M8 5v14l11-7z"></path></svg>
+      </div>
+
+      <!-- Right actions -->
+      <div class="reel-actions">
+        <div class="reel-avatar-wrap">
+          <img class="reel-avatar" src="${escapeHtml(v.avatar)}" alt="${escapeHtml(v.author)}" onerror="this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(v.author)}&background=fe2c55&color=fff&size=128&bold=true'">
+          <div class="reel-follow-dot">
+            <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"></path></svg>
+          </div>
+        </div>
+
+        <button class="reel-action-btn reel-like-btn ${isLiked ? 'liked' : ''}" data-id="${escapeHtml(v.id)}" data-likes="${escapeHtml(v.likes)}">
+          <div class="reel-action-icon">
+            <svg viewBox="0 0 24 24" width="22" height="22"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"></path></svg>
+          </div>
+          <span class="reel-action-count reel-like-count">${escapeHtml(v.likes)}</span>
+        </button>
+
+        <button class="reel-action-btn reel-comment-btn">
+          <div class="reel-action-icon">
+            <svg viewBox="0 0 24 24" width="22" height="22"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"></path></svg>
+          </div>
+          <span class="reel-action-count">${escapeHtml(v.comments)}</span>
+        </button>
+
+        <button class="reel-action-btn reel-share-btn">
+          <div class="reel-action-icon">
+            <svg viewBox="0 0 24 24" width="22" height="22"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92 1.61 0 2.92-1.31 2.92-2.92s-1.31-2.92-2.92-2.92z"></path></svg>
+          </div>
+          <span class="reel-action-count">${escapeHtml(v.shares)}</span>
+        </button>
+      </div>
+
+      <!-- Bottom info -->
+      <div class="reel-info">
+        <div class="reel-author">${escapeHtml(v.author)}</div>
+        <div class="reel-desc">${escapeHtml(v.desc)}</div>
+        <div class="reel-music-row">
+          <svg class="reel-music-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"></path></svg>
+          <span class="reel-music-text">Orijinal ses - ${escapeHtml(v.author)}</span>
+        </div>
+      </div>
+
+      <!-- Progress bar -->
+      <div class="reel-progress"><div class="reel-progress-bar"></div></div>
+    `;
+
+    // Like button
+    const likeBtn = item.querySelector('.reel-like-btn');
+    if (likeBtn) {
+      likeBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const id = likeBtn.getAttribute('data-id');
+        const countEl = likeBtn.querySelector('.reel-like-count');
+        if (reelsLikedSet.has(id)) {
+          reelsLikedSet.delete(id);
+          likeBtn.classList.remove('liked');
+          if (countEl) countEl.textContent = likeBtn.getAttribute('data-likes');
+        } else {
+          reelsLikedSet.add(id);
+          likeBtn.classList.add('liked');
+          // Animate heart
+          const icon = likeBtn.querySelector('.reel-action-icon');
+          if (icon) {
+            icon.style.transform = 'scale(1.35)';
+            setTimeout(() => { icon.style.transform = ''; }, 200);
+          }
+        }
+        try { navigator.vibrate?.(15); } catch (_) {}
+      });
+    }
+
+    // Comment button
+    const commentBtn = item.querySelector('.reel-comment-btn');
+    if (commentBtn) {
+      commentBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        showToast('Yorum özelliği yakında 💬');
+      });
+    }
+
+    // Share button
+    const shareBtn = item.querySelector('.reel-share-btn');
+    if (shareBtn) {
+      shareBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (navigator.share) {
+          navigator.share({ title: v.author, text: v.desc, url: 'https://www.tiktok.com/@' + v.author.replace('@', '') }).catch(() => {});
+        } else {
+          navigator.clipboard?.writeText('https://www.tiktok.com/@' + v.author.replace('@', ''));
+          showToast('Link kopyalandı 📋');
+        }
+      });
+    }
+
+    // Tap to pause/play (visual only — images don't play)
+    const tapZone = item.querySelector('.reel-tap-zone');
+    const playIcon = item.querySelector('.reel-play-icon');
+    let isPaused = false;
+    if (tapZone) {
+      tapZone.addEventListener('click', () => {
+        isPaused = !isPaused;
+        if (playIcon) {
+          playIcon.classList.toggle('show', isPaused);
+          if (!isPaused) setTimeout(() => playIcon.classList.remove('show'), 600);
+        }
+        try { navigator.vibrate?.(10); } catch (_) {}
+      });
+    }
+
+    reelsFeed.appendChild(item);
+  });
+
+  // End card
+  const endCard = document.createElement('div');
+  endCard.className = 'reels-end-card';
+  endCard.innerHTML = `
+    <svg viewBox="0 0 24 24" width="56" height="56" fill="#fff" style="opacity:0.3;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"></path></svg>
+    <p>Tüm reels'lar izlendi</p>
+    <button class="reels-reload-btn" onclick="reelsLoaded=false; loadReelsFeed()">Yenile</button>
+  `;
+  reelsFeed.appendChild(endCard);
+
+  // Intersection Observer — progress bar fake animation per visible reel
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const bar = entry.target.querySelector('.reel-progress-bar');
+        if (bar) {
+          bar.style.transition = 'none';
+          bar.style.width = '0%';
+          setTimeout(() => {
+            bar.style.transition = 'width 8s linear';
+            bar.style.width = '100%';
+          }, 50);
+        }
+      } else {
+        const bar = entry.target.querySelector('.reel-progress-bar');
+        if (bar) {
+          bar.style.transition = 'none';
+          bar.style.width = '0%';
+        }
+      }
+    });
+  }, { threshold: 0.6 });
+
+  reelsFeed.querySelectorAll('.reel-item').forEach(el => observer.observe(el));
 }
 
