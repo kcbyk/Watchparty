@@ -2273,6 +2273,7 @@ const mobSearchSuggestionsList = document.getElementById('mob-search-suggestions
 
 // Mobile Bottom Nav
 const mobNavHome = document.getElementById('mob-nav-home');
+const mobNavReels = document.getElementById('mob-nav-reels');
 const mobNavRoom = document.getElementById('mob-nav-room');
 const mobNavChat = document.getElementById('mob-nav-chat');
 const mobNavUsers = document.getElementById('mob-nav-users');
@@ -2478,8 +2479,21 @@ if (mobNavHome) {
   });
 }
 
+if (mobNavReels) {
+  mobNavReels.addEventListener('click', () => {
+    document.querySelectorAll('.mobile-nav-item').forEach(i => i.classList.remove('active'));
+    mobNavReels.classList.add('active');
+    usersDrawer.classList.remove('open');
+    chatDrawer.classList.remove('open');
+    openFeedView();
+    fetchAndRenderFeed('short reels kısa video');
+    showToast('Reels yükleniyor...');
+  });
+}
+
 if (mobNavRoom) {
   mobNavRoom.addEventListener('click', () => {
+    document.querySelectorAll('.mobile-nav-item').forEach(i => i.classList.remove('active'));
     usersDrawer.classList.remove('open');
     chatDrawer.classList.remove('open');
     openRoomModal();
