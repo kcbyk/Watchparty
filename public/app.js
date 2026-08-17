@@ -303,7 +303,7 @@ function doSync(fn) {
 }
 
 // ─── Infinite Scroll & Feed State ──────────────────────────────────────────
-let currentFeedQuery = 'yapay zeka';
+let currentFeedQuery = 'popüler';
 let currentFeedPage = 1;
 let isFeedLoading = false;
 let hasMoreFeed = true;
@@ -701,7 +701,7 @@ async function fetchAndRenderFeed(query, showSpinner = true) {
     videoGrid.innerHTML = `
       <div style="grid-column: 1/-1; padding: 48px 0; text-align: center; color: var(--yt-text-secondary); font-size: 14px;">
         <div style="display:inline-block; width:30px; height:30px; border:3px solid rgba(255,255,255,0.15); border-top-color:#ff0000; border-radius:50%; animation:ptr-spin 0.75s linear infinite; margin-bottom:12px;"></div>
-        <div style="font-weight:500; color:#fff;">Yapay zekâ önerileri hazırlanıyor...</div>
+        <div style="font-weight:500; color:#fff;">Videolar yükleniyor...</div>
       </div>
     `;
   }
@@ -2354,9 +2354,13 @@ function executeSearch(query) {
   if (!query || !query.trim()) return;
   const q = query.trim();
   addSearchToHistory(q);
+  // Close mobile search overlay
   if (mobileSearchOverlay) mobileSearchOverlay.classList.remove('active');
+  // Update both search inputs to show the query
   if (searchInput) searchInput.value = q;
+  if (clearSearchBtn) clearSearchBtn.classList.toggle('visible', !!q);
   if (mobSearchInput) mobSearchInput.value = q;
+  // Open feed view and fetch results
   openFeedView();
   fetchAndRenderFeed(q);
   showToast(`Aranıyor: "${q}" 🔍`);
@@ -2409,6 +2413,14 @@ if (mobileSearchTriggerBtn && mobileSearchOverlay) {
 
 if (mobSearchCloseBtn && mobileSearchOverlay) {
   mobSearchCloseBtn.addEventListener('click', () => {
+    mobileSearchOverlay.classList.remove('active');
+  });
+}
+
+// Also handle the header back button on mobile (visible when search bar is focused)
+const mobileSearchBackBtn = document.getElementById('mobile-search-back-btn');
+if (mobileSearchBackBtn && mobileSearchOverlay) {
+  mobileSearchBackBtn.addEventListener('click', () => {
     mobileSearchOverlay.classList.remove('active');
   });
 }
@@ -2474,6 +2486,22 @@ if (mobNavUsers) {
 }
 
 // ─── Initialize ────────────────────────────────────────────────────────────
+// Pool of diverse feed queries that rotate on each page load for fresh content
+const FEED_ROTATION_QUERIES = [
+  'trend türkçe pop şarkılar 2025',
+  'viral hit müzikler 2025',
+  'en çok dinlenen türkçe şarkılar',
+  'türkçe rap hiphop yeni',
+  'dünya hit müzikleri trend',
+  'türkçe arabesk pop yeni şarkılar',
+  'pop müzik yeni çıkanlar',
+  'türkçe rock alternatif müzik',
+  'elektronik müzik trap 2025',
+  'klasik rock pop en iyi',
+  'chill lo-fi müzik çalma listesi',
+  'akustik söz yazarı şarkılar'
+];
+
 function startApp() {
   try {
     if (searchInput) searchInput.value = '';
@@ -2491,8 +2519,25 @@ function startApp() {
       renderVideoGrid(CLIENT_FALLBACK_VIDEOS);
     }
 
-    // 3. In background: fetch real videos from API (replace fallback when ready)
-    _fetchFeedInBackground('popüler müzik trend');
+    // 3. In background: fetch real videos from AI feed (fresh content on every load)
+    //    Use user interests if available, otherwise rotate through diverse queries
+    let userInterests = [];
+    try { userInterests = JSON.parse(localStorage.getItem('yt_wp_ai_interests') || '[]'); } catch (_) {}
+    aiFeedSeed = Math.floor(Math.random() * FEED_ROTATION_QUERIES.length);
+    const feedUrl = `/api/ai-feed?context=${encodeURIComponent(userInterests.join(','))}&seed=${aiFeedSeed}`;
+    currentFeedQuery = FEED_ROTATION_QUERIES[aiFeedSeed % FEED_ROTATION_QUERIES.length];
+    
+    fetch(feedUrl)
+      .then(r => r.json())
+      .then(videos => {
+        if (Array.isArray(videos) && videos.length > 0) {
+          renderVideoGrid(videos);
+        } else {
+          // fallback to a rotating query
+          _fetchFeedInBackground(currentFeedQuery);
+        }
+      })
+      .catch(() => _fetchFeedInBackground(currentFeedQuery));
 
     // 4. Connect to socket and join room
     initRoom();
