@@ -1484,7 +1484,6 @@ const downloadLoading = document.getElementById('download-loading');
 const downloadOptions = document.getElementById('download-options');
 const downloadError = document.getElementById('download-error');
 const downloadMp3Btn = document.getElementById('download-mp3-btn');
-const downloadVideoList = document.getElementById('download-video-list');
 const downloadThumb = document.getElementById('download-thumb');
 const downloadTitle = document.getElementById('download-title');
 const downloadMp3Size = document.getElementById('download-mp3-size');
@@ -1529,25 +1528,6 @@ async function openDownloadModal(video) {
         }
       };
       downloadMp3Btn.style.display = 'flex';
-    }
-
-    // Video butonları — API + proxy ile indir
-    if (downloadVideoList) {
-      downloadVideoList.innerHTML = '';
-      (data.videos || []).forEach(v => {
-        const btn = document.createElement('button');
-        btn.className = 'download-option-btn';
-        btn.innerHTML = `
-          <div style="display:flex;align-items:center;gap:10px;">
-            <svg viewBox="0 0 24 24" width="20" height="20" fill="#f44336"><path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-8 12.5v-9l6 4.5-6 4.5z"></path></svg>
-            <span>${v.quality} MP4</span>
-          </div>
-          <span class="download-size-badge">${formatFileSize(v.size)}</span>
-        `;
-        const safeTitle = (data.title || video.title || 'video').replace(/[^\w\s-]/g, '').trim();
-        btn.onclick = () => triggerProxyDownload(v.url, `${safeTitle}_${v.quality}.mp4`);
-        downloadVideoList.appendChild(btn);
-      });
     }
 
     downloadLoading.style.display = 'none';

@@ -160,7 +160,10 @@
                     </div>
                     <span class="watch-sub-count">1,24 Mn abone</span>
                   </div>
-                  <button class="watch-subscribe-btn">Abone Ol</button>
+                  <button class="watch-subscribe-btn" id="watch-download-btn">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"></path></svg>
+                    İndir
+                  </button>
                 </div>
 
                 <div class="watch-actions-right">
@@ -455,6 +458,42 @@
 
   <!-- Toast Notification -->
   <div class="yt-toast" id="toast">Bildirim</div>
+
+  <!-- ═══════════════════════════════════════════════════════════ DOWNLOAD MODAL -->
+  <div class="modal-overlay" id="download-modal">
+    <div class="modal-card" style="max-width: 420px;">
+      <div class="modal-title" style="display:flex; justify-content:space-between; align-items:center;">
+        <span>İndir</span>
+        <button class="icon-button" id="download-modal-close" title="Kapat">
+          <svg viewBox="0 0 24 24" width="20" height="20"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg>
+        </button>
+      </div>
+      <!-- Video preview -->
+      <div id="download-preview" style="display:flex; gap:12px; align-items:center; margin: 12px 0; padding:12px; background:#1a1a1a; border-radius:10px;">
+        <img id="download-thumb" src="" alt="" style="width:80px;height:46px;border-radius:6px;object-fit:cover;flex-shrink:0;">
+        <div id="download-title" style="font-size:13px;font-weight:500;color:#fff;line-height:1.4;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;"></div>
+      </div>
+      <!-- Loading state -->
+      <div id="download-loading" style="text-align:center;padding:24px;color:#aaa;font-size:14px;">
+        <span>Yükleniyor...</span>
+      </div>
+      <!-- Options -->
+      <div id="download-options" style="display:none;">
+        <!-- MP3 -->
+        <div style="margin-bottom:12px;">
+          <div style="font-size:12px;font-weight:600;color:#aaa;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Ses (MP3)</div>
+          <button id="download-mp3-btn" class="download-option-btn">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="#3ea6ff"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"></path></svg>
+              <span>MP3 olarak indir</span>
+            </div>
+            <span class="download-size-badge" id="download-mp3-size"></span>
+          </button>
+        </div>
+      </div>
+      <div id="download-error" style="display:none;text-align:center;padding:16px;color:#f44336;font-size:14px;"></div>
+    </div>
+  </div>
 
 </div>
 
