@@ -2923,28 +2923,22 @@ function renderReelsFeed(videos) {
     const isLiked = reelsLikedSet.has(v.id);
 
     item.innerHTML = `
-      <!-- YouTube IFrame container -->
-      <div class="reel-yt-wrap">
-        <!-- Cover shown until player loads -->
-        <img class="reel-cover-img" src="${escapeHtml(v.cover)}" alt="${escapeHtml(v.desc || v.author)}" loading="${idx < 2 ? 'eager' : 'lazy'}">
+      <!-- Arka plan thumbnail — video yok, sadece görsel -->
+      <img class="reel-bg-thumb" src="${escapeHtml(v.cover)}" alt="${escapeHtml(v.desc || v.author)}" loading="${idx < 3 ? 'eager' : 'lazy'}">
+      <!-- Gradient overlay -->
+      <div class="reel-gradient"></div>
 
-        <!-- Play overlay (shown before video starts) -->
-        <div class="reel-play-overlay" title="Oynat">
-          <div class="reel-play-circle">
-            <svg viewBox="0 0 24 24" width="32" height="32" fill="#fff"><path d="M8 5v14l11-7z"></path></svg>
-          </div>
-        </div>
+      <!-- Tıklanabilir alan — ana oynatıcıda açar -->
+      <div class="reel-tap-play"></div>
 
-        <!-- YT player container -->
-        <div class="reel-yt-player" id="reel-yt-${escapeHtml(v.videoId || v.id)}"></div>
-
-        <!-- Transparent tap-zone OVER the iframe — hides YT controls, handles tap -->
-        <div class="reel-yt-tapzone"></div>
+      <!-- Ortada Play ikonu -->
+      <div class="reel-center-play" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="52" height="52" fill="rgba(255,255,255,0.85)"><path d="M8 5v14l11-7z"></path></svg>
       </div>
 
       <!-- Shorts badge -->
       <div class="reel-tiktok-badge">
-        <svg viewBox="0 0 24 24" fill="#fff" width="16" height="16"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"></path></svg>
+        <svg viewBox="0 0 24 24" fill="#fff" width="15" height="15"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"></path></svg>
         <span>Shorts</span>
       </div>
 
@@ -2959,113 +2953,67 @@ function renderReelsFeed(videos) {
 
         <button class="reel-action-btn reel-like-btn ${isLiked ? 'liked' : ''}" data-id="${escapeHtml(v.id)}" data-likes="${escapeHtml(String(v.likes))}">
           <div class="reel-action-icon">
-            <svg viewBox="0 0 24 24" width="22" height="22"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"></path></svg>
+            <svg viewBox="0 0 24 24" width="24" height="24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"></path></svg>
           </div>
           <span class="reel-action-count reel-like-count">${escapeHtml(String(v.likes))}</span>
         </button>
 
         <button class="reel-action-btn reel-comment-btn">
           <div class="reel-action-icon">
-            <svg viewBox="0 0 24 24" width="22" height="22"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"></path></svg>
+            <svg viewBox="0 0 24 24" width="24" height="24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"></path></svg>
           </div>
           <span class="reel-action-count">${escapeHtml(String(v.comments))}</span>
         </button>
 
         <button class="reel-action-btn reel-share-btn" data-videoid="${escapeHtml(v.videoId || v.id)}">
           <div class="reel-action-icon">
-            <svg viewBox="0 0 24 24" width="22" height="22"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92 1.61 0 2.92-1.31 2.92-2.92s-1.31-2.92-2.92-2.92z"></path></svg>
+            <svg viewBox="0 0 24 24" width="24" height="24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92 1.61 0 2.92-1.31 2.92-2.92s-1.31-2.92-2.92-2.92z"></path></svg>
           </div>
           <span class="reel-action-count">${escapeHtml(String(v.shares))}</span>
         </button>
       </div>
 
-      <!-- Bottom info -->
+      <!-- Alt bilgi -->
       <div class="reel-info">
         <div class="reel-author">${escapeHtml(v.nickname || v.author)}</div>
         <div class="reel-desc">${escapeHtml(v.desc || '')}</div>
         <div class="reel-music-row">
           <svg class="reel-music-icon" viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"></path></svg>
-          <span class="reel-music-text">${escapeHtml(v.music || v.desc || 'YouTube Shorts')}</span>
+          <span class="reel-music-text">${escapeHtml(v.music || 'YouTube Shorts')}</span>
         </div>
       </div>
 
-      <!-- Progress bar -->
+      <!-- Progress bar (animasyonlu) -->
       <div class="reel-progress"><div class="reel-progress-bar"></div></div>
     `;
 
-    // Play overlay tıklama — YouTube player'ı başlat
-    const playOverlay = item.querySelector('.reel-play-overlay');
-    const playerDiv = item.querySelector('.reel-yt-player');
-    const coverImg = item.querySelector('.reel-cover-img');
-    const tapZone = item.querySelector('.reel-yt-tapzone');
-    let ytPlayer = null;
-    let ytReady = false;
-    let ytPaused = false;
-
-    function initYTPlayer() {
-      if (ytPlayer) return;
-      if (playOverlay) playOverlay.style.display = 'none';
-      if (coverImg) coverImg.style.opacity = '0';
-
-      if (window.YT && window.YT.Player) {
+    // Tap play — reels'i kapat, ana oynatıcıda aç
+    const tapPlay = item.querySelector('.reel-tap-play');
+    if (tapPlay) {
+      tapPlay.addEventListener('click', () => {
         const videoId = item.getAttribute('data-videoid');
-        ytPlayer = new window.YT.Player(playerDiv, {
-          videoId,
-          width: '100%',
-          height: '100%',
-          playerVars: {
-            autoplay: 1,
-            controls: 0,           // ← YT UI tamamen gizli
-            modestbranding: 1,
-            rel: 0,
-            playsinline: 1,
-            loop: 1,
-            playlist: videoId,
-            fs: 0,                  // fullscreen button gizli
-            iv_load_policy: 3,      // annotation yok
-            cc_load_policy: 0,
-            origin: window.location.origin
-          },
-          events: {
-            onReady: (e) => {
-              ytReady = true;
-              e.target.playVideo();
-              item._ytPlayer = e.target;
-            },
-            onStateChange: (e) => {
-              if (e.data === window.YT.PlayerState.PLAYING) {
-                ytPaused = false;
-                if (tapZone) tapZone.classList.remove('paused');
-              } else if (e.data === window.YT.PlayerState.PAUSED) {
-                ytPaused = true;
-                if (tapZone) tapZone.classList.add('paused');
-              }
-            }
-          }
-        });
-        item._ytPlayer = ytPlayer;
-      }
-    }
-
-    if (playOverlay) {
-      playOverlay.addEventListener('click', initYTPlayer);
-    }
-
-    // Tap zone — pause/play toggle (iframe üzerinde bizim kontrolümüz)
-    if (tapZone) {
-      tapZone.addEventListener('click', () => {
-        if (!ytPlayer) { initYTPlayer(); return; }
-        if (!ytReady) return;
-        if (ytPaused) {
-          ytPlayer.playVideo();
-        } else {
-          ytPlayer.pauseVideo();
-        }
-        try { navigator.vibrate?.(8); } catch (_) {}
+        if (!videoId) return;
+        // Reels'i kapat
+        closeReelsView();
+        // Videoyu ana feed'de aç
+        const videoData = {
+          id: videoId,
+          title: v.desc || v.nickname || 'YouTube Short',
+          thumbnail: v.cover || `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
+          author: v.nickname || v.author || 'YouTube',
+          channelAvatar: v.avatar || '',
+          duration: v.duration || '0:60',
+          views: v.likes || '',
+          ago: ''
+        };
+        openWatchView(videoData);
+        if (socket && socket.connected) socket.emit('play-video-now', videoData);
+        showToast('Oynatılıyor ▶');
+        try { navigator.vibrate?.(10); } catch (_) {}
       });
     }
 
-    // Like button
+    // Like
     const likeBtn = item.querySelector('.reel-like-btn');
     if (likeBtn) {
       likeBtn.addEventListener('click', (e) => {
@@ -3080,10 +3028,7 @@ function renderReelsFeed(videos) {
           reelsLikedSet.add(id);
           likeBtn.classList.add('liked');
           const icon = likeBtn.querySelector('.reel-action-icon');
-          if (icon) {
-            icon.style.transform = 'scale(1.35)';
-            setTimeout(() => { icon.style.transform = ''; }, 200);
-          }
+          if (icon) { icon.style.transform = 'scale(1.4)'; setTimeout(() => { icon.style.transform = ''; }, 200); }
         }
         try { navigator.vibrate?.(15); } catch (_) {}
       });
@@ -3124,29 +3069,23 @@ function renderReelsFeed(videos) {
   `;
   reelsFeed.appendChild(endCard);
 
-  // Intersection Observer — görünen item'da oynatmayı durdur/başlat
+  // Intersection Observer — progress bar animasyonu
   const observer = new IntersectionObserver((entries) => {
     entries.forEach(entry => {
       const bar = entry.target.querySelector('.reel-progress-bar');
-      if (!entry.isIntersecting) {
-        // Görünürden çıktı — YT player'ı durdur
-        if (entry.target._ytPlayer) {
-          try { entry.target._ytPlayer.pauseVideo(); } catch (_) {}
-        }
-        if (bar) { bar.style.transition = 'none'; bar.style.width = '0%'; }
-      } else {
-        // Görünür oldu — play overlay göster (zaten oynatılıyorsa devam et)
-        if (entry.target._ytPlayer) {
-          try { entry.target._ytPlayer.playVideo(); } catch (_) {}
-        }
+      const centerPlay = entry.target.querySelector('.reel-center-play');
+      if (entry.isIntersecting) {
         if (bar) {
           bar.style.transition = 'none';
           bar.style.width = '0%';
-          setTimeout(() => { bar.style.transition = 'width 60s linear'; bar.style.width = '100%'; }, 100);
+          setTimeout(() => { bar.style.transition = 'width 8s linear'; bar.style.width = '60%'; }, 80);
         }
+        if (centerPlay) centerPlay.style.opacity = '1';
+      } else {
+        if (bar) { bar.style.transition = 'none'; bar.style.width = '0%'; }
       }
     });
-  }, { threshold: 0.6 });
+  }, { threshold: 0.55 });
 
   reelsFeed.querySelectorAll('.reel-item').forEach(el => observer.observe(el));
 }

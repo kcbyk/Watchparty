@@ -2794,105 +2794,48 @@ svg {
 }
 
 /* Background cover image (when no video) */
-.reel-bg {
+.reel-bg-thumb {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
-  filter: brightness(0.75);
-  transition: filter 0.3s ease, opacity 0.4s ease;
-}
-.reel-item.active .reel-bg {
-  filter: brightness(0.6);
+  z-index: 0;
 }
 
-/* TikTok embed wrapper — iframe container */
-.reel-embed-wrap {
+/* Gradient — alt karartma */
+.reel-gradient {
   position: absolute;
   inset: 0;
-  width: 100%;
-  height: 100%;
-  overflow: hidden;
-  background: #000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.reel-embed-wrap iframe {
-  width: 100%;
-  height: 100%;
-  border: none;
-  background: #000;
-}
-
-/* Thumbnail placeholder shown while iframe loads */
-.reel-thumb-placeholder {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+  background: linear-gradient(
+    to bottom,
+    rgba(0,0,0,0.1) 0%,
+    transparent 30%,
+    transparent 55%,
+    rgba(0,0,0,0.75) 100%
+  );
   z-index: 1;
-  transition: opacity 0.5s ease;
 }
 
-/* Loading spinner inside embed */
-.reel-embed-loader {
+/* Tüm ekran tıklanabilir alan */
+.reel-tap-play {
   position: absolute;
   inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   z-index: 2;
-  pointer-events: none;
-  background: rgba(0,0,0,0.3);
-}
-
-/* Native video element */
-.reel-video {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  background: #000;
   cursor: pointer;
 }
 
-/* Video loading overlay */
-.reel-video-loader {
+/* Ortadaki play ikonu */
+.reel-center-play {
   position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
   z-index: 3;
   pointer-events: none;
-  background: rgba(0,0,0,0.25);
-}
-
-/* Mute button */
-.reel-mute-btn {
-  position: absolute;
-  top: 62px;
-  left: 12px;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: rgba(0,0,0,0.45);
-  backdrop-filter: blur(6px);
-  border: none;
-  color: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  z-index: 5;
-  transition: background 0.15s ease;
-}
-.reel-mute-btn:hover {
-  background: rgba(0,0,0,0.65);
+  opacity: 0.9;
+  filter: drop-shadow(0 2px 12px rgba(0,0,0,0.7));
+  transition: opacity 0.2s ease;
 }
 
 /* ─── Right Action Buttons (TikTok style) ────────────────────────────────── */
@@ -3113,92 +3056,4 @@ svg {
   opacity: 0.88;
 }
 
-/* ─── Reels YT Player ────────────────────────────────────────────────────── */
-.reel-yt-wrap {
-  position: absolute;
-  inset: 0;
-  background: #000;
-  overflow: hidden;
-}
-.reel-cover-img {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  z-index: 1;
-  transition: opacity 0.4s ease;
-}
-/* YT player — iframe'i büyüt ki kendi kontrolleri görünmesin */
-.reel-yt-player {
-  position: absolute;
-  top: -60px;      /* üstten ve alttan taşır → title bar gizlenir */
-  bottom: -60px;
-  left: -10px;
-  right: -10px;
-  z-index: 2;
-}
-.reel-yt-player iframe {
-  width: 100%;
-  height: 100%;
-  border: none;
-  pointer-events: none; /* tapzone kontrol ediyor */
-}
-
-/* Saydam tıklanabilir overlay — YT kontrollerini gizler, bizimkileri çalıştırır */
-.reel-yt-tapzone {
-  position: absolute;
-  inset: 0;
-  z-index: 3;
-  cursor: pointer;
-  background: transparent;
-}
-/* Duraklatıldığında ortada pause göstergesi */
-.reel-yt-tapzone::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%) scale(0);
-  width: 64px;
-  height: 64px;
-  border-radius: 50%;
-  background: rgba(0,0,0,0.55) url("data:image/svg+xml,%3Csvg viewBox='0 0 24 24' fill='white' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M6 19h4V5H6v14zm8-14v14h4V5h-4z'/%3E%3C/svg%3E") center/32px no-repeat;
-  transition: transform 0.15s ease, opacity 0.3s ease;
-  opacity: 0;
-}
-.reel-yt-tapzone.paused::after {
-  transform: translate(-50%, -50%) scale(1);
-  opacity: 1;
-}
-
-/* Play overlay button */
-.reel-play-overlay {
-  position: absolute;
-  inset: 0;
-  z-index: 4;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  background: rgba(0,0,0,0.2);
-  transition: background 0.15s ease;
-}
-.reel-play-overlay:hover {
-  background: rgba(0,0,0,0.32);
-}
-.reel-play-circle {
-  width: 64px;
-  height: 64px;
-  border-radius: 50%;
-  background: rgba(0,0,0,0.6);
-  backdrop-filter: blur(8px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 2px solid rgba(255,255,255,0.4);
-  transition: transform 0.15s ease;
-}
-.reel-play-overlay:active .reel-play-circle {
-  transform: scale(0.9);
-}
+/* ─── Reels YT Player (artık kullanılmıyor — temiz) ───────────────────────── */
