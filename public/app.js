@@ -709,6 +709,8 @@ async function fetchAndRenderFeed(query, showSpinner = true) {
   try {
     let url = '';
     const isMainFeed = !query || query === 'Tümü' || query === 'trend popüler türkiye';
+    // Cache-busting timestamp so each call gets fresh data
+    const ts = Date.now();
     
     if (isMainFeed) {
       let userInterests = [];
@@ -716,9 +718,9 @@ async function fetchAndRenderFeed(query, showSpinner = true) {
         userInterests = JSON.parse(localStorage.getItem('yt_wp_ai_interests') || '[]');
       } catch (_) {}
       aiFeedSeed++;
-      url = `/api/ai-feed?context=${encodeURIComponent(userInterests.join(','))}&seed=${aiFeedSeed}`;
+      url = `/api/ai-feed?context=${encodeURIComponent(userInterests.join(','))}&seed=${aiFeedSeed}&_t=${ts}`;
     } else {
-      url = `/api/search?q=${encodeURIComponent(query)}&page=1&limit=20`;
+      url = `/api/search?q=${encodeURIComponent(query)}&page=1&limit=20&_t=${ts}`;
     }
 
     const res = await fetch(url);
@@ -726,7 +728,21 @@ async function fetchAndRenderFeed(query, showSpinner = true) {
 
     if (!Array.isArray(videos) || videos.length === 0) {
       if (!showSpinner) return;
-      renderVideoGrid(CLIENT_FALLBACK_VIDEOS);
+      // Show proper empty state for search, not fallback videos
+      if (!isMainFeed) {
+        if (videoGrid) videoGrid.innerHTML = `
+          <div style="grid-column: 1/-1; padding: 64px 24px; text-align: center; color: var(--yt-text-secondary);">
+            <svg viewBox="0 0 24 24" width="52" height="52" fill="#555" style="margin: 0 auto 16px; display: block;">
+              <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
+            </svg>
+            <div style="font-size:17px; font-weight:600; color:#fff; margin-bottom:8px;">"${escapeHtml(query)}" için sonuç bulunamadı</div>
+            <div style="font-size:13px; color:#888; margin-bottom:20px;">Farklı anahtar kelimeler deneyin veya yazım hatası olup olmadığını kontrol edin.</div>
+            <button onclick="fetchAndRenderFeed('Tümü')" style="background:#ff0000; color:#fff; border:none; border-radius:20px; padding:10px 24px; font-size:14px; font-weight:600; cursor:pointer;">Ana Sayfaya Dön</button>
+          </div>
+        `;
+      } else {
+        renderVideoGrid(CLIENT_FALLBACK_VIDEOS);
+      }
       return;
     }
 
@@ -2507,6 +2523,19 @@ function startApp() {
     if (searchInput) searchInput.value = '';
     if (clearSearchBtn) clearSearchBtn.classList.remove('visible');
 
+    // ─── Startup Cleanup: Remove any internal/AI queries from search history ─
+    try {
+      const INTERNAL_QUERIES = ['yapay zeka', 'yapay zekâ', 'trend popüler türkiye', 'popüler müzik trend'];
+      const history = JSON.parse(localStorage.getItem('yt_wp_user_search_history') || '[]');
+      const cleaned = history.filter(item => {
+        const text = (typeof item === 'string' ? item : item?.text || '').toLowerCase().trim();
+        return !INTERNAL_QUERIES.includes(text);
+      });
+      if (cleaned.length !== history.length) {
+        localStorage.setItem('yt_wp_user_search_history', JSON.stringify(cleaned));
+      }
+    } catch (_) {}
+
     // 1. Generate a room code immediately so the pill shows a code, not BAĞLANIYOR
     const urlParams = new URLSearchParams(window.location.search);
     const paramRoom = urlParams.get('room');
@@ -2524,7 +2553,8 @@ function startApp() {
     let userInterests = [];
     try { userInterests = JSON.parse(localStorage.getItem('yt_wp_ai_interests') || '[]'); } catch (_) {}
     aiFeedSeed = Math.floor(Math.random() * FEED_ROTATION_QUERIES.length);
-    const feedUrl = `/api/ai-feed?context=${encodeURIComponent(userInterests.join(','))}&seed=${aiFeedSeed}`;
+    const ts = Date.now();
+    const feedUrl = `/api/ai-feed?context=${encodeURIComponent(userInterests.join(','))}&seed=${aiFeedSeed}&_t=${ts}`;
     currentFeedQuery = FEED_ROTATION_QUERIES[aiFeedSeed % FEED_ROTATION_QUERIES.length];
     
     fetch(feedUrl)
@@ -2533,7 +2563,7 @@ function startApp() {
         if (Array.isArray(videos) && videos.length > 0) {
           renderVideoGrid(videos);
         } else {
-          // fallback to a rotating query
+          // fallback to a rotating query with cache bust
           _fetchFeedInBackground(currentFeedQuery);
         }
       })

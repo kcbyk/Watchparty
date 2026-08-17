@@ -634,33 +634,53 @@ app.get('/api/ai-feed', async (req, res) => {
       userKeywords = rawContext.split(',').map(s => s.trim()).filter(Boolean);
     }
 
+    // Diverse discovery pool — 24 queries for maximum variety
     const discoveryPool = [
-      'trend popüler türkiye',
+      'trend popüler türkiye 2025',
       'yeni çıkan hit şarkılar klip',
-      'viral şarkılar trendler',
-      'türkçe rap hiphop 2026',
+      'viral şarkılar trendler 2025',
+      'türkçe rap hiphop yeni',
       'türkçe pop en çok dinlenen',
       'en iyi akustik canlı performans',
       'dünya trend müzikler',
-      'global hit music'
+      'global hit music 2025',
+      'en çok izlenen müzik klipleri',
+      'türkçe arabesk duygusal şarkılar',
+      'pop müzik yeni album',
+      'rock alternatíf müzik 2025',
+      'elektronik müzik trap edm',
+      'chill lo-fi study music',
+      'klasik rock efsane şarkılar',
+      'r&b soul müzik yeni',
+      'k-pop hit songs 2025',
+      'latin pop reggaeton hits',
+      'turkish music best songs',
+      'jazz blues relaxing music',
+      'hip hop rap best tracks',
+      'indie alternative new music',
+      'country music popular songs',
+      'reggae dancehall hits'
     ];
 
     let targetQueries = [];
     if (userKeywords.length > 0) {
-      // Kişiselleştirilmiş kullanıcı ilgi alanları
-      const shuffled = userKeywords.sort(() => 0.5 - Math.random());
+      // Kişisel kullanıcı ilgi alanları
+      const shuffled = [...userKeywords].sort(() => 0.5 - Math.random());
       const selected = shuffled.slice(0, 2);
-      targetQueries.push(`${selected.join(' ')} en iyi popüler`);
-      targetQueries.push(`${selected[0]} benzeri şarkılar`);
+      targetQueries.push(`${selected.join(' ')} popüler`);
+      if (selected[0]) targetQueries.push(`${selected[0]} benzeri şarkılar`);
     }
     
-    // Keşif havuzundan ekle
-    const discQ = discoveryPool[Math.abs(parseInt(seed, 10) || 0) % discoveryPool.length];
-    targetQueries.push(discQ);
+    // Keşif havuzundan iki farklı sorgu seç (daha fazla çeşitlilik)
+    const seedNum = Math.abs(parseInt(seed, 10) || 0);
+    const discQ1 = discoveryPool[seedNum % discoveryPool.length];
+    const discQ2 = discoveryPool[(seedNum + Math.floor(discoveryPool.length / 2)) % discoveryPool.length];
+    targetQueries.push(discQ1);
+    if (discQ1 !== discQ2) targetQueries.push(discQ2);
 
     let combinedVideos = [];
     for (const q of targetQueries) {
-      let results = await searchWithYouTubeDataApi(q, 15);
+      let results = await searchWithYouTubeDataApi(q, 12);
       if (!results || results.length === 0) {
         results = await searchWithYts(q);
       }
@@ -681,6 +701,16 @@ app.get('/api/ai-feed', async (req, res) => {
       cleanList.push(v);
     }
 
+    // Shuffle results for more variety on each call
+    for (let i = cleanList.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [cleanList[i], cleanList[j]] = [cleanList[j], cleanList[i]];
+    }
+
+    // No-cache headers so browser always fetches fresh
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+
     if (cleanList.length === 0) {
       return res.json(SEED_VIDEOS.map(v => ({
         ...v,
@@ -700,21 +730,22 @@ app.get('/api/search', async (req, res) => {
   const q = (req.query.q || '').trim();
   const page = Math.max(1, parseInt(req.query.page, 10) || 1);
   const limit = Math.max(1, parseInt(req.query.limit, 10) || 20);
+  const fresh = !!req.query._t; // bypass cache when _t timestamp is present
   if (!q) return res.json([]);
 
   const cacheKey = `${q.toLowerCase()}_p${page}_l${limit}`;
 
-  // 1. Instant RAM Cache Hit (0ms)
-  const cached = getCachedResults(cacheKey);
-  if (cached) {
-    return res.json(cached);
-  }
+  // 1. RAM Cache Hit (skip if fresh request)
+  if (!fresh) {
+    const cached = getCachedResults(cacheKey);
+    if (cached) return res.json(cached);
 
-  // 2. Persistent SQLite Cache Hit (0ms)
-  const dbCached = db.getCachedSearch(cacheKey);
-  if (dbCached) {
-    setCachedResults(cacheKey, dbCached);
-    return res.json(dbCached);
+    // 2. SQLite Cache Hit (skip if fresh)
+    const dbCached = db.getCachedSearch(cacheKey);
+    if (dbCached) {
+      setCachedResults(cacheKey, dbCached);
+      return res.json(dbCached);
+    }
   }
 
   const queryTerm = page > 1 ? `${q} ${['yeni', 'popüler', 'trend', '2026', 'en iyi'][page % 5]}` : q;
