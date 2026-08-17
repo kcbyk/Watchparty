@@ -263,7 +263,7 @@ const SEED_VIDEOS = [
     thumbnail: "https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg",
     duration: "3:33",
     author: "Rick Astley",
-    channelAvatar: "https://yt3.ggpht.com/ytc/AIdro_kC_vK34XG5u6b0U=s88-c-k-c0x00ffffff-no-rj",
+    channelAvatar: "",
     subCount: "4,2 Mn abone",
     ago: "14 yıl önce",
     views: "1,5 Mr görüntüleme"
@@ -274,7 +274,7 @@ const SEED_VIDEOS = [
     thumbnail: "https://i.ytimg.com/vi/kJQP7kiw5Fk/hqdefault.jpg",
     duration: "4:42",
     author: "Luis Fonsi",
-    channelAvatar: "https://yt3.ggpht.com/ytc/AIdro_m9c_d7uL5X3G8y=s88-c-k-c0x00ffffff-no-rj",
+    channelAvatar: "",
     subCount: "31 Mn abone",
     ago: "7 yıl önce",
     views: "8,4 Mr görüntüleme"
@@ -285,7 +285,7 @@ const SEED_VIDEOS = [
     thumbnail: "https://i.ytimg.com/vi/9bZkp7q19f0/hqdefault.jpg",
     duration: "4:13",
     author: "officialpsy",
-    channelAvatar: "https://yt3.ggpht.com/ytc/AIdro_n4y8u7L_fF4=s88-c-k-c0x00ffffff-no-rj",
+    channelAvatar: "",
     subCount: "19 Mn abone",
     ago: "12 yıl önce",
     views: "5,1 Mr görüntüleme"
@@ -296,7 +296,7 @@ const SEED_VIDEOS = [
     thumbnail: "https://i.ytimg.com/vi/fJ9rUzIMcZQ/hqdefault.jpg",
     duration: "5:59",
     author: "Queen Official",
-    channelAvatar: "https://yt3.ggpht.com/ytc/AIdro_l2K4x_8u7=s88-c-k-c0x00ffffff-no-rj",
+    channelAvatar: "",
     subCount: "17 Mn abone",
     ago: "15 yıl önce",
     views: "1,7 Mr görüntüleme"
@@ -307,7 +307,7 @@ const SEED_VIDEOS = [
     thumbnail: "https://i.ytimg.com/vi/JGwWNGJdvx8/hqdefault.jpg",
     duration: "4:24",
     author: "Ed Sheeran",
-    channelAvatar: "https://yt3.ggpht.com/ytc/AIdro_m8J9K7x_2=s88-c-k-c0x00ffffff-no-rj",
+    channelAvatar: "",
     subCount: "54 Mn abone",
     ago: "7 yıl önce",
     views: "6,2 Mr görüntüleme"
@@ -318,7 +318,7 @@ const SEED_VIDEOS = [
     thumbnail: "https://i.ytimg.com/vi/OPf0YbXqDm0/hqdefault.jpg",
     duration: "4:31",
     author: "Mark Ronson",
-    channelAvatar: "https://yt3.ggpht.com/ytc/AIdro_k3J9x8=s88-c-k-c0x00ffffff-no-rj",
+    channelAvatar: "",
     subCount: "11 Mn abone",
     ago: "9 yıl önce",
     views: "5,2 Mr görüntüleme"
@@ -329,7 +329,7 @@ const SEED_VIDEOS = [
     thumbnail: "https://i.ytimg.com/vi/RgKAFK5djSk/hqdefault.jpg",
     duration: "3:58",
     author: "Wiz Khalifa",
-    channelAvatar: "https://yt3.ggpht.com/ytc/AIdro_m4K9L7x_3=s88-c-k-c0x00ffffff-no-rj",
+    channelAvatar: "",
     subCount: "29 Mn abone",
     ago: "9 yıl önce",
     views: "6,1 Mr görüntüleme"
@@ -340,7 +340,7 @@ const SEED_VIDEOS = [
     thumbnail: "https://i.ytimg.com/vi/09R8_2nJtjg/hqdefault.jpg",
     duration: "5:01",
     author: "Maroon 5",
-    channelAvatar: "https://yt3.ggpht.com/ytc/AIdro_p8L9K4=s88-c-k-c0x00ffffff-no-rj",
+    channelAvatar: "",
     subCount: "36 Mn abone",
     ago: "9 yıl önce",
     views: "4,0 Mr görüntüleme"
@@ -351,7 +351,7 @@ const SEED_VIDEOS = [
     thumbnail: "https://i.ytimg.com/vi/hT_nvWreIhg/hqdefault.jpg",
     duration: "4:44",
     author: "OneRepublic",
-    channelAvatar: "https://yt3.ggpht.com/ytc/AIdro_n7K9x2=s88-c-k-c0x00ffffff-no-rj",
+    channelAvatar: "",
     subCount: "10 Mn abone",
     ago: "11 yıl önce",
     views: "4,0 Mr görüntüleme"
@@ -362,7 +362,7 @@ const SEED_VIDEOS = [
     thumbnail: "https://i.ytimg.com/vi/CevxZvSJLk8/hqdefault.jpg",
     duration: "4:30",
     author: "Katy Perry",
-    channelAvatar: "https://yt3.ggpht.com/ytc/AIdro_k2L8x9=s88-c-k-c0x00ffffff-no-rj",
+    channelAvatar: "",
     subCount: "45 Mn abone",
     ago: "10 yıl önce",
     views: "4,0 Mr görüntüleme"
@@ -373,7 +373,7 @@ const SEED_VIDEOS = [
     thumbnail: "https://i.ytimg.com/vi/uelHwf8o7_U/hqdefault.jpg",
     duration: "4:27",
     author: "EminemMusic",
-    channelAvatar: "https://yt3.ggpht.com/ytc/AIdro_m6L4K1=s88-c-k-c0x00ffffff-no-rj",
+    channelAvatar: "",
     subCount: "59 Mn abone",
     ago: "14 yıl önce",
     views: "2,8 Mr görüntüleme"
@@ -384,7 +384,7 @@ const SEED_VIDEOS = [
     thumbnail: "https://i.ytimg.com/vi/YQHsXMglC9A/hqdefault.jpg",
     duration: "6:07",
     author: "Adele",
-    channelAvatar: "https://yt3.ggpht.com/ytc/AIdro_p4K9x7=s88-c-k-c0x00ffffff-no-rj",
+    channelAvatar: "",
     subCount: "30 Mn abone",
     ago: "8 yıl önce",
     views: "3,1 Mr görüntüleme"

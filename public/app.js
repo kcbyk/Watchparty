@@ -909,8 +909,7 @@ window.onYouTubeIframeAPIReady = function() {
       controls: 1,
       playsinline: 1,
       enablejsapi: 1,
-      origin: window.location.origin,
-      host: 'https://www.youtube-nocookie.com'
+      origin: window.location.origin
     },
     events: {
       onReady: (event) => {
