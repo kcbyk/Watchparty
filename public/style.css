@@ -2904,7 +2904,8 @@ svg {
   flex-direction: column;
   align-items: center;
   gap: 20px;
-  z-index: 5;
+  z-index: 10;
+  pointer-events: auto;
 }
 .reel-action-btn {
   display: flex;
@@ -2986,10 +2987,11 @@ svg {
   left: 12px;
   right: 72px;
   bottom: 24px;
-  z-index: 5;
+  z-index: 10;
   display: flex;
   flex-direction: column;
   gap: 8px;
+  pointer-events: none;
 }
 .reel-author {
   font-size: 15px;
@@ -3046,7 +3048,7 @@ svg {
   backdrop-filter: blur(6px);
   border-radius: 14px;
   padding: 4px 10px 4px 6px;
-  z-index: 5;
+  z-index: 10;
 }
 .reel-tiktok-badge svg {
   width: 18px;
@@ -3067,7 +3069,7 @@ svg {
   right: 0;
   height: 2px;
   background: rgba(255,255,255,0.2);
-  z-index: 6;
+  z-index: 10;
 }
 .reel-progress-bar {
   height: 100%;
@@ -3127,32 +3129,63 @@ svg {
   z-index: 1;
   transition: opacity 0.4s ease;
 }
+/* YT player — iframe'i büyüt ki kendi kontrolleri görünmesin */
 .reel-yt-player {
   position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
+  top: -60px;      /* üstten ve alttan taşır → title bar gizlenir */
+  bottom: -60px;
+  left: -10px;
+  right: -10px;
   z-index: 2;
 }
 .reel-yt-player iframe {
   width: 100%;
   height: 100%;
   border: none;
+  pointer-events: none; /* tapzone kontrol ediyor */
 }
+
+/* Saydam tıklanabilir overlay — YT kontrollerini gizler, bizimkileri çalıştırır */
+.reel-yt-tapzone {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  cursor: pointer;
+  background: transparent;
+}
+/* Duraklatıldığında ortada pause göstergesi */
+.reel-yt-tapzone::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0);
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: rgba(0,0,0,0.55) url("data:image/svg+xml,%3Csvg viewBox='0 0 24 24' fill='white' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M6 19h4V5H6v14zm8-14v14h4V5h-4z'/%3E%3C/svg%3E") center/32px no-repeat;
+  transition: transform 0.15s ease, opacity 0.3s ease;
+  opacity: 0;
+}
+.reel-yt-tapzone.paused::after {
+  transform: translate(-50%, -50%) scale(1);
+  opacity: 1;
+}
+
 /* Play overlay button */
 .reel-play-overlay {
   position: absolute;
   inset: 0;
-  z-index: 3;
+  z-index: 4;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  background: rgba(0,0,0,0.15);
+  background: rgba(0,0,0,0.2);
   transition: background 0.15s ease;
 }
 .reel-play-overlay:hover {
-  background: rgba(0,0,0,0.3);
+  background: rgba(0,0,0,0.32);
 }
 .reel-play-circle {
   width: 64px;

@@ -2923,18 +2923,23 @@ function renderReelsFeed(videos) {
     const isLiked = reelsLikedSet.has(v.id);
 
     item.innerHTML = `
-      <!-- YouTube IFrame container (lazy inject on scroll) -->
+      <!-- YouTube IFrame container -->
       <div class="reel-yt-wrap">
         <!-- Cover shown until player loads -->
         <img class="reel-cover-img" src="${escapeHtml(v.cover)}" alt="${escapeHtml(v.desc || v.author)}" loading="${idx < 2 ? 'eager' : 'lazy'}">
-        <!-- Play overlay -->
+
+        <!-- Play overlay (shown before video starts) -->
         <div class="reel-play-overlay" title="Oynat">
           <div class="reel-play-circle">
             <svg viewBox="0 0 24 24" width="32" height="32" fill="#fff"><path d="M8 5v14l11-7z"></path></svg>
           </div>
         </div>
-        <!-- YT player will be injected here as div#yt-reel-{id} -->
+
+        <!-- YT player container -->
         <div class="reel-yt-player" id="reel-yt-${escapeHtml(v.videoId || v.id)}"></div>
+
+        <!-- Transparent tap-zone OVER the iframe — hides YT controls, handles tap -->
+        <div class="reel-yt-tapzone"></div>
       </div>
 
       <!-- Shorts badge -->
@@ -2990,43 +2995,73 @@ function renderReelsFeed(videos) {
 
     // Play overlay tıklama — YouTube player'ı başlat
     const playOverlay = item.querySelector('.reel-play-overlay');
-    const ytWrap = item.querySelector('.reel-yt-wrap');
     const playerDiv = item.querySelector('.reel-yt-player');
     const coverImg = item.querySelector('.reel-cover-img');
+    const tapZone = item.querySelector('.reel-yt-tapzone');
     let ytPlayer = null;
-    let playerReady = false;
+    let ytReady = false;
+    let ytPaused = false;
 
-    if (playOverlay) {
-      playOverlay.addEventListener('click', () => {
-        playOverlay.style.display = 'none';
-        if (coverImg) coverImg.style.opacity = '0';
-        // YT player inject
-        if (!ytPlayer && window.YT && window.YT.Player) {
-          const videoId = item.getAttribute('data-videoid');
-          ytPlayer = new window.YT.Player(playerDiv, {
-            videoId,
-            playerVars: {
-              autoplay: 1,
-              controls: 1,
-              modestbranding: 1,
-              rel: 0,
-              playsinline: 1,
-              loop: 1,
-              playlist: videoId
+    function initYTPlayer() {
+      if (ytPlayer) return;
+      if (playOverlay) playOverlay.style.display = 'none';
+      if (coverImg) coverImg.style.opacity = '0';
+
+      if (window.YT && window.YT.Player) {
+        const videoId = item.getAttribute('data-videoid');
+        ytPlayer = new window.YT.Player(playerDiv, {
+          videoId,
+          width: '100%',
+          height: '100%',
+          playerVars: {
+            autoplay: 1,
+            controls: 0,           // ← YT UI tamamen gizli
+            modestbranding: 1,
+            rel: 0,
+            playsinline: 1,
+            loop: 1,
+            playlist: videoId,
+            fs: 0,                  // fullscreen button gizli
+            iv_load_policy: 3,      // annotation yok
+            cc_load_policy: 0,
+            origin: window.location.origin
+          },
+          events: {
+            onReady: (e) => {
+              ytReady = true;
+              e.target.playVideo();
+              item._ytPlayer = e.target;
             },
-            events: {
-              onReady: (e) => { playerReady = true; e.target.playVideo(); },
-              onStateChange: (e) => {
-                if (e.data === window.YT.PlayerState.PLAYING) {
-                  item._ytPlayer = e.target;
-                }
+            onStateChange: (e) => {
+              if (e.data === window.YT.PlayerState.PLAYING) {
+                ytPaused = false;
+                if (tapZone) tapZone.classList.remove('paused');
+              } else if (e.data === window.YT.PlayerState.PAUSED) {
+                ytPaused = true;
+                if (tapZone) tapZone.classList.add('paused');
               }
             }
-          });
-          item._ytPlayer = ytPlayer;
-        } else if (ytPlayer && playerReady) {
+          }
+        });
+        item._ytPlayer = ytPlayer;
+      }
+    }
+
+    if (playOverlay) {
+      playOverlay.addEventListener('click', initYTPlayer);
+    }
+
+    // Tap zone — pause/play toggle (iframe üzerinde bizim kontrolümüz)
+    if (tapZone) {
+      tapZone.addEventListener('click', () => {
+        if (!ytPlayer) { initYTPlayer(); return; }
+        if (!ytReady) return;
+        if (ytPaused) {
           ytPlayer.playVideo();
+        } else {
+          ytPlayer.pauseVideo();
         }
+        try { navigator.vibrate?.(8); } catch (_) {}
       });
     }
 
