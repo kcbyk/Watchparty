@@ -1037,17 +1037,20 @@ function prepareAudioStream(videoId) {
     _currentAudioStreamVideoId = videoId;
     el.src = `/api/stream-audio/${videoId}`;
     el.preload = 'auto';
-    el.load();
+    el.pause(); // Ekran açıkken ASLA arka plan sesi çalmaz
   }
 }
 
 function startBackgroundAudioSession() {
-  const el = initBackgroundAudioEngine();
-  if (!el.src) {
-    el.src = _getSilentWavDataUri();
-  }
-  if (el && el.paused) {
-    el.play().catch(() => {});
+  // Yalnızca ekran kilitliyken/gizliyken arka plan sesini çal
+  if (document.visibilityState === 'hidden') {
+    const el = initBackgroundAudioEngine();
+    if (el && el.paused) {
+      el.play().catch(() => {});
+    }
+  } else {
+    // Ekran açıkken arka plan sesini durdur (çift ses olmasını kesin olarak engeller)
+    stopBackgroundAudioSession();
   }
 }
 
@@ -1064,7 +1067,8 @@ function setupMediaSession(video) {
   const artist = decodeHtmlEntities(video.author) || 'YouTube';
   const thumbUrl = video.thumbnail || `https://i.ytimg.com/vi/${video.id}/hqdefault.jpg`;
 
-  // Gerçek ses akışını arka planda hazırla
+  // Ekran açıkken arka plan sesini durdur (çift ses engelleme)
+  stopBackgroundAudioSession();
   prepareAudioStream(video.id);
 
   try {
@@ -1177,7 +1181,6 @@ function setupMediaSession(video) {
   } catch(e) {}
 
   updateMediaSessionState('playing');
-  startBackgroundAudioSession();
   startMediaSessionPositionTracking();
   requestWakeLock().catch(() => {});
 }
