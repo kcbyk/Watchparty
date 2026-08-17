@@ -173,10 +173,9 @@ app.get('/api/proxy-download', async (req, res) => {
   }
 });
 
-// ─── Direct Audio Download Endpoint (/api/download-audio/:videoId) ───────────
-app.get('/api/download-audio/:videoId', async (req, res) => {
+// ─── Direct Audio Stream Endpoint (For Background Lock-Screen Audio Playback) ──
+app.get('/api/stream-audio/:videoId', async (req, res) => {
   const { videoId } = req.params;
-  const customTitle = req.query.title || 'sarki';
   if (!videoId || !/^[a-zA-Z0-9_-]{11}$/.test(videoId)) {
     return res.status(400).send('Geçersiz video ID');
   }
@@ -184,15 +183,36 @@ app.get('/api/download-audio/:videoId', async (req, res) => {
   try {
     const mp3Data = await fetchMp3Link(videoId);
     if (!mp3Data || !mp3Data.link) {
-      return res.status(404).send('MP3 kaynağı hazırlanamadı');
+      return res.status(404).send('MP3 akışı hazırlanamadı');
     }
 
-    const filename = (mp3Data.title || customTitle).replace(/[/\\?%*:|"<>]/g, '_').trim() + '.mp3';
-    const redirectUrl = `/api/proxy-download?url=${encodeURIComponent(mp3Data.link)}&filename=${encodeURIComponent(filename)}`;
-    res.redirect(redirectUrl);
+    const upstream = await fetch(mp3Data.link, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': '*/*'
+      }
+    });
+
+    if (!upstream.ok) {
+      return res.redirect(mp3Data.link);
+    }
+
+    res.setHeader('Content-Type', 'audio/mpeg');
+    res.setHeader('Content-Disposition', 'inline');
+    res.setHeader('Accept-Ranges', 'bytes');
+    const contentLength = upstream.headers.get('content-length');
+    if (contentLength) res.setHeader('Content-Length', contentLength);
+
+    const { Readable } = require('stream');
+    if (upstream.body && typeof upstream.body.getReader === 'function') {
+      Readable.fromWeb(upstream.body).pipe(res);
+    } else {
+      const buf = await upstream.arrayBuffer();
+      res.end(Buffer.from(buf));
+    }
   } catch (err) {
-    console.error('[Download Audio Error]', err.message);
-    res.status(500).send('İndirme başlatılamadı');
+    console.error('[Stream Audio Error]', err.message);
+    if (!res.headersSent) res.status(500).send('Ses akışı hatası');
   }
 });
 

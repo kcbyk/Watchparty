@@ -977,15 +977,16 @@ function updatePlayIcon(playing) {
   updateMediaSessionState(playing ? 'playing' : 'paused');
 }
 
-// ─── Professional Media Session & Background Lock Screen Audio Engine ─────
+// ─── Professional Media Session & Real Background Lock-Screen Audio Engine ─
 let _bgAudioEl = null;
 let _mediaSessionPositionInterval = null;
 let _wakeLock = null;
+let _currentAudioStreamVideoId = null;
 
-// Clean 2-Second Silent Stereo WAV PCM Data URI (Universally supported by iOS & Android)
+// Clean 2-Second Silent Stereo WAV PCM Data URI (Universally supported fallback carrier)
 function _getSilentWavDataUri() {
   const sampleRate = 8000;
-  const numSamples = sampleRate * 2; // 2 seconds
+  const numSamples = sampleRate * 2;
   const dataSize = numSamples;
   const buf = new ArrayBuffer(44 + dataSize);
   const v = new DataView(buf);
@@ -996,7 +997,7 @@ function _getSilentWavDataUri() {
   v.setUint32(24, sampleRate, true); v.setUint32(28, sampleRate, true);
   v.setUint16(32, 1, true); v.setUint16(34, 8, true);
   ws(36, 'data'); v.setUint32(40, dataSize, true);
-  for (let i = 44; i < 44 + dataSize; i++) v.setUint8(i, 128); // 128 = Silence in 8-bit PCM
+  for (let i = 44; i < 44 + dataSize; i++) v.setUint8(i, 128);
   
   let binary = '';
   const bytes = new Uint8Array(buf);
@@ -1016,17 +1017,35 @@ function initBackgroundAudioEngine() {
     _bgAudioEl.setAttribute('playsinline', '');
     _bgAudioEl.setAttribute('webkit-playsinline', '');
     _bgAudioEl.setAttribute('preload', 'auto');
-    _bgAudioEl.loop = true;
-    _bgAudioEl.src = _getSilentWavDataUri();
-    _bgAudioEl.volume = 0.01; // Inaudible carrier to keep mobile media notification alive
-    _bgAudioEl.style.cssText = 'position:fixed; bottom:0; left:0; width:1px; height:1px; opacity:0.01; pointer-events:none; z-index:-1;';
+    _bgAudioEl.style.cssText = 'position:fixed; bottom:0; left:0; width:1px; height:1px; opacity:0.001; pointer-events:none; z-index:-1;';
     document.body.appendChild(_bgAudioEl);
+
+    // Audio stream bittiğinde otomatik sonraki videoya geç
+    _bgAudioEl.addEventListener('ended', () => {
+      if (document.visibilityState === 'hidden' && socket && socket.connected) {
+        socket.emit('video-ended');
+      }
+    });
   }
   return _bgAudioEl;
 }
 
+function prepareAudioStream(videoId) {
+  if (!videoId) return;
+  const el = initBackgroundAudioEngine();
+  if (_currentAudioStreamVideoId !== videoId) {
+    _currentAudioStreamVideoId = videoId;
+    el.src = `/api/stream-audio/${videoId}`;
+    el.preload = 'auto';
+    el.load();
+  }
+}
+
 function startBackgroundAudioSession() {
   const el = initBackgroundAudioEngine();
+  if (!el.src) {
+    el.src = _getSilentWavDataUri();
+  }
   if (el && el.paused) {
     el.play().catch(() => {});
   }
@@ -1045,11 +1064,14 @@ function setupMediaSession(video) {
   const artist = decodeHtmlEntities(video.author) || 'YouTube';
   const thumbUrl = video.thumbnail || `https://i.ytimg.com/vi/${video.id}/hqdefault.jpg`;
 
+  // Gerçek ses akışını arka planda hazırla
+  prepareAudioStream(video.id);
+
   try {
     navigator.mediaSession.metadata = new MediaMetadata({
       title: title,
       artist: artist,
-      album: 'WatchParty Birlikte İzle',
+      album: 'WatchParty Müzik & Video',
       artwork: [
         { src: thumbUrl, sizes: '512x512', type: 'image/jpeg' },
         { src: thumbUrl, sizes: '256x256', type: 'image/jpeg' },
@@ -1064,28 +1086,37 @@ function setupMediaSession(video) {
   // Register Handlers
   try {
     navigator.mediaSession.setActionHandler('play', () => {
-      if (player && typeof player.playVideo === 'function') {
+      if (document.visibilityState === 'hidden' && _bgAudioEl) {
+        _bgAudioEl.play().catch(() => {});
+      } else if (player && typeof player.playVideo === 'function') {
         try { player.playVideo(); } catch(_) {}
       }
-      if (socket && socket.connected) socket.emit('video-play', player?.getCurrentTime ? player.getCurrentTime() : 0);
-      startBackgroundAudioSession();
+      if (socket && socket.connected) {
+        const currentTime = _bgAudioEl && !_bgAudioEl.paused ? _bgAudioEl.currentTime : (player?.getCurrentTime ? player.getCurrentTime() : 0);
+        socket.emit('video-play', currentTime);
+      }
       updateMediaSessionState('playing');
     });
 
     navigator.mediaSession.setActionHandler('pause', () => {
+      if (_bgAudioEl && !_bgAudioEl.paused) {
+        _bgAudioEl.pause();
+      }
       if (player && typeof player.pauseVideo === 'function') {
         try { player.pauseVideo(); } catch(_) {}
       }
-      if (socket && socket.connected) socket.emit('video-pause', player?.getCurrentTime ? player.getCurrentTime() : 0);
-      stopBackgroundAudioSession();
+      if (socket && socket.connected) {
+        const currentTime = _bgAudioEl ? _bgAudioEl.currentTime : (player?.getCurrentTime ? player.getCurrentTime() : 0);
+        socket.emit('video-pause', currentTime);
+      }
       updateMediaSessionState('paused');
     });
 
     navigator.mediaSession.setActionHandler('stop', () => {
+      if (_bgAudioEl) _bgAudioEl.pause();
       if (player && typeof player.stopVideo === 'function') {
         try { player.stopVideo(); } catch(_) {}
       }
-      stopBackgroundAudioSession();
       updateMediaSessionState('none');
     });
 
@@ -1097,10 +1128,10 @@ function setupMediaSession(video) {
     });
 
     navigator.mediaSession.setActionHandler('previoustrack', () => {
-      if (!player || typeof player.getCurrentTime !== 'function') return;
-      const currentTime = player.getCurrentTime();
+      const currentTime = _bgAudioEl && !_bgAudioEl.paused ? _bgAudioEl.currentTime : (player?.getCurrentTime ? player.getCurrentTime() : 0);
       if (currentTime > 5) {
-        player.seekTo(0, true);
+        if (_bgAudioEl) _bgAudioEl.currentTime = 0;
+        if (player && typeof player.seekTo === 'function') player.seekTo(0, true);
         if (socket && socket.connected) socket.emit('video-seek', 0);
         showToast('Başa alındı ⏮️');
       } else {
@@ -1112,10 +1143,11 @@ function setupMediaSession(video) {
 
     navigator.mediaSession.setActionHandler('seekbackward', (details) => {
       try {
-        if (!player || typeof player.getCurrentTime !== 'function') return;
         const skipTime = details.seekOffset || 10;
-        const newTime = Math.max(0, player.getCurrentTime() - skipTime);
-        player.seekTo(newTime, true);
+        const cur = _bgAudioEl && !_bgAudioEl.paused ? _bgAudioEl.currentTime : (player?.getCurrentTime ? player.getCurrentTime() : 0);
+        const newTime = Math.max(0, cur - skipTime);
+        if (_bgAudioEl) _bgAudioEl.currentTime = newTime;
+        if (player && typeof player.seekTo === 'function') player.seekTo(newTime, true);
         if (socket && socket.connected) socket.emit('video-seek', newTime);
         updateMediaSessionPosition();
       } catch(_) {}
@@ -1123,11 +1155,12 @@ function setupMediaSession(video) {
 
     navigator.mediaSession.setActionHandler('seekforward', (details) => {
       try {
-        if (!player || typeof player.getCurrentTime !== 'function') return;
         const skipTime = details.seekOffset || 10;
-        const dur = player.getDuration ? (player.getDuration() || 9999) : 9999;
-        const newTime = Math.min(dur, player.getCurrentTime() + skipTime);
-        player.seekTo(newTime, true);
+        const dur = player?.getDuration ? (player.getDuration() || 9999) : 9999;
+        const cur = _bgAudioEl && !_bgAudioEl.paused ? _bgAudioEl.currentTime : (player?.getCurrentTime ? player.getCurrentTime() : 0);
+        const newTime = Math.min(dur, cur + skipTime);
+        if (_bgAudioEl) _bgAudioEl.currentTime = newTime;
+        if (player && typeof player.seekTo === 'function') player.seekTo(newTime, true);
         if (socket && socket.connected) socket.emit('video-seek', newTime);
         updateMediaSessionPosition();
       } catch(_) {}
@@ -1135,8 +1168,8 @@ function setupMediaSession(video) {
 
     navigator.mediaSession.setActionHandler('seekto', (details) => {
       try {
-        if (!player || typeof player.seekTo !== 'function') return;
-        player.seekTo(details.seekTime, true);
+        if (_bgAudioEl) _bgAudioEl.currentTime = details.seekTime;
+        if (player && typeof player.seekTo === 'function') player.seekTo(details.seekTime, true);
         if (socket && socket.connected) socket.emit('video-seek', details.seekTime);
         updateMediaSessionPosition();
       } catch(_) {}
@@ -1157,12 +1190,18 @@ function updateMediaSessionState(state) {
 }
 
 function updateMediaSessionPosition() {
-  if (!('mediaSession' in navigator) || !player) return;
+  if (!('mediaSession' in navigator)) return;
   try {
-    if (typeof player.getCurrentTime !== 'function' || typeof player.getDuration !== 'function') return;
-    const position = player.getCurrentTime();
-    const duration = player.getDuration();
-    const playbackRate = player.getPlaybackRate ? (player.getPlaybackRate() || 1.0) : 1.0;
+    let position = 0;
+    let duration = 0;
+    if (_bgAudioEl && !_bgAudioEl.paused && _bgAudioEl.currentTime > 0) {
+      position = _bgAudioEl.currentTime;
+      duration = _bgAudioEl.duration || (player?.getDuration ? player.getDuration() : 0);
+    } else if (player && typeof player.getCurrentTime === 'function') {
+      position = player.getCurrentTime();
+      duration = player.getDuration();
+    }
+    const playbackRate = player?.getPlaybackRate ? (player.getPlaybackRate() || 1.0) : 1.0;
     if (duration && duration > 0) {
       navigator.mediaSession.setPositionState({
         duration,
@@ -1176,7 +1215,7 @@ function updateMediaSessionPosition() {
 function startMediaSessionPositionTracking() {
   if (_mediaSessionPositionInterval) clearInterval(_mediaSessionPositionInterval);
   _mediaSessionPositionInterval = setInterval(() => {
-    if (isPlaying && player && playerReady) {
+    if (isPlaying) {
       updateMediaSessionPosition();
     }
   }, 1000);
@@ -1197,28 +1236,60 @@ async function releaseWakeLock() {
   }
 }
 
-// ─── Visibility Change Handler ─────────────────────────────────────────────
+// ─── Visibility Change Handler (Seamless Iframe <-> Audio Handoff) ──────────
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'hidden') {
+    // Telefon kilitlendi / ekran kapandı:
     _wasPlayingBeforeHide = isPlaying;
-    if (isPlaying) {
+    if (isPlaying && currentPlayingVideo) {
       _screenLockPause = true;
-      // Ensure carrier audio keeps playing so lock-screen notification remains alive
-      startBackgroundAudioSession();
+
+      // YouTube iframe kilitlenince ses kesilir; gerçek ses akışını devreye sok:
+      const el = initBackgroundAudioEngine();
+      if (_currentAudioStreamVideoId !== currentPlayingVideo.id) {
+        prepareAudioStream(currentPlayingVideo.id);
+      }
+      
+      let seekT = 0;
+      if (player && typeof player.getCurrentTime === 'function') {
+        try { seekT = player.getCurrentTime() || 0; } catch(_) {}
+      }
+      
+      try {
+        el.currentTime = seekT;
+        el.volume = 1.0; // Gerçek müzik sesi
+        el.play().catch(() => {});
+      } catch(_) {}
+
+      console.log('[WatchParty] Kilit ekranı modu: Kesintisiz arka plan ses akışı devrede 🎵');
     }
   } else {
+    // Telefon kilidi açıldı / ekrana dönüldü:
     _screenLockPause = false;
     if (_wasPlayingBeforeHide && player && playerReady) {
       isPlaying = true;
       updateMediaSessionState('playing');
+      
+      // Arka plan sesinden süreyi al ve YouTube iframe'e aktar:
+      const el = _bgAudioEl;
+      let resumeTime = null;
+      if (el && !el.paused && el.currentTime > 0) {
+        resumeTime = el.currentTime;
+        el.pause(); // İki kat ses çıkmaması için durdur
+      }
+
       setTimeout(() => {
         try {
           if (player && typeof player.playVideo === 'function') {
+            if (resumeTime !== null) {
+              player.seekTo(resumeTime, true);
+              if (socket && socket.connected) socket.emit('video-seek', resumeTime);
+            }
             player.playVideo();
             updateMediaSessionPosition();
           }
         } catch (_) {}
-      }, 300);
+      }, 250);
     }
     _wasPlayingBeforeHide = false;
     if (isPlaying) requestWakeLock().catch(() => {});
