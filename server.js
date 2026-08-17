@@ -11,6 +11,144 @@ const io = new Server(server, { cors: { origin: '*' } });
 
 app.use(express.static(path.join(__dirname, 'public')));
 
+// ─── YouTube Media Downloader API (RapidAPI) ──────────────────────────────────
+const RAPIDAPI_DOWNLOAD_KEYS = [
+  'bb06a77a1dmshf74916c37643f8ap1e4682jsn88e788cec36a',
+  'cb858c97a3msh3798faa4195f2c4p1ce356jsnfed9edfcad6f'
+];
+let downloadKeyIndex = 0;
+
+function getDownloadKey() {
+  return RAPIDAPI_DOWNLOAD_KEYS[downloadKeyIndex % RAPIDAPI_DOWNLOAD_KEYS.length];
+}
+function rotateDownloadKey() {
+  downloadKeyIndex = (downloadKeyIndex + 1) % RAPIDAPI_DOWNLOAD_KEYS.length;
+}
+
+// ─── MP3 API (youtube-mp36) — direkt indirilebilir link verir ────────────────
+async function fetchMp3Link(videoId) {
+  for (let attempt = 0; attempt < RAPIDAPI_DOWNLOAD_KEYS.length; attempt++) {
+    const key = RAPIDAPI_DOWNLOAD_KEYS[attempt];
+    try {
+      const res = await fetch(`https://youtube-mp36.p.rapidapi.com/dl?id=${videoId}`, {
+        headers: {
+          'x-rapidapi-host': 'youtube-mp36.p.rapidapi.com',
+          'x-rapidapi-key': key
+        }
+      });
+      const data = await res.json();
+      if (data.status === 'ok' && data.link) return data;
+    } catch (e) {}
+  }
+  return null;
+}
+
+async function fetchVideoDetails(videoId) {
+  for (let attempt = 0; attempt < RAPIDAPI_DOWNLOAD_KEYS.length; attempt++) {
+    const key = getDownloadKey();
+    try {
+      const res = await fetch(
+        `https://youtube-media-downloader.p.rapidapi.com/v2/video/details?videoId=${videoId}`,
+        { headers: { 'x-rapidapi-host': 'youtube-media-downloader.p.rapidapi.com', 'x-rapidapi-key': key } }
+      );
+      const data = await res.json();
+      if (data.errorId === 'Success') return data;
+      if (data.message && (data.message.includes('Too many') || data.message.includes('rate'))) {
+        rotateDownloadKey();
+        continue;
+      }
+      return null;
+    } catch (e) {
+      rotateDownloadKey();
+    }
+  }
+  return null;
+}
+
+// ─── Download Info Route ───────────────────────────────────────────────────────
+app.get('/api/download-info/:videoId', async (req, res) => {
+  const { videoId } = req.params;
+  if (!videoId || !/^[a-zA-Z0-9_-]{11}$/.test(videoId)) {
+    return res.status(400).json({ error: 'Geçersiz video ID' });
+  }
+
+  try {
+    const thumbnail = `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
+
+    // MP3 ve video detaylarını paralel çek
+    const [mp3Data, videoData] = await Promise.all([
+      fetchMp3Link(videoId),
+      fetchVideoDetails(videoId)
+    ]);
+
+    // MP4 seçenekleri
+    const allowedQualities = ['1080p', '720p', '480p', '360p'];
+    const videoOptions = videoData ? (videoData.videos?.items || [])
+      .filter(v => v.extension === 'mp4' && allowedQualities.includes(v.quality))
+      .reduce((acc, v) => {
+        if (!acc.find(x => x.quality === v.quality)) acc.push(v);
+        return acc;
+      }, [])
+      .sort((a, b) => parseInt(b.quality) - parseInt(a.quality))
+      .slice(0, 4) : [];
+
+    const title = mp3Data?.title || videoData?.title || 'video';
+
+    res.json({
+      title,
+      thumbnail,
+      mp3: mp3Data ? { url: mp3Data.link, size: mp3Data.filesize } : null,
+      videos: videoOptions
+    });
+  } catch (err) {
+    console.error('[Download Info Error]', err.message);
+    res.status(500).json({ error: 'Sunucu hatası' });
+  }
+});
+
+// ─── Proxy Download Route (CORS bypass) ───────────────────────────────────────
+app.get('/api/proxy-download', async (req, res) => {
+  const { url, filename } = req.query;
+  if (!url) return res.status(400).send('URL gerekli');
+
+  try {
+    const decodedUrl = decodeURIComponent(url);
+
+    // Sadece bilinen güvenli CDN'lere izin ver
+    const allowedDomains = ['googlevideo.com', 'ytimg.com', '123tokyo.xyz', 'rr1.', 'rr2.', 'rr3.', 'rr4.'];
+    const isAllowed = allowedDomains.some(d => decodedUrl.includes(d));
+    if (!isAllowed) {
+      return res.status(403).send('İzin verilmeyen kaynak');
+    }
+
+    const upstream = await fetch(decodedUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'Referer': 'https://www.youtube.com/'
+      }
+    });
+
+    if (!upstream.ok) {
+      return res.status(upstream.status).send('Kaynak alınamadı');
+    }
+
+    const contentType = upstream.headers.get('content-type') || 'application/octet-stream';
+    const contentLength = upstream.headers.get('content-length');
+    const safeFilename = encodeURIComponent(filename || 'download');
+
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${safeFilename}`);
+    if (contentLength) res.setHeader('Content-Length', contentLength);
+
+    // Node 18+ için ReadableStream → Buffer → send
+    const buf = await upstream.arrayBuffer();
+    res.end(Buffer.from(buf));
+  } catch (err) {
+    console.error('[Proxy Download Error]', err.message);
+    res.status(500).send('İndirme hatası');
+  }
+});
+
 // Persistent Room Storage backed by SQLite
 const rooms = db.loadAllRooms();
 

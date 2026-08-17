@@ -362,6 +362,7 @@ const watchSidebarChips = document.getElementById('watch-sidebar-chips');
 const watchLikeBtn = document.getElementById('watch-like-btn');
 const watchShareBtn = document.getElementById('watch-share-btn');
 const watchAddQueueBtn = document.getElementById('watch-add-queue-btn');
+const watchDownloadBtn = document.getElementById('watch-download-btn');
 
 let relatedVideosCache = [];
 let currentWatchSidebarTab = 'related'; // 'related' | 'queue'
@@ -1474,6 +1475,127 @@ function endActiveCall() {
   outgoingCallModal.classList.remove('active');
   activeCallTargetId = null;
   currentIncomingCallerId = null;
+}
+
+// ─── Download Modal ───────────────────────────────────────────────────────────
+const downloadModal = document.getElementById('download-modal');
+const downloadModalClose = document.getElementById('download-modal-close');
+const downloadLoading = document.getElementById('download-loading');
+const downloadOptions = document.getElementById('download-options');
+const downloadError = document.getElementById('download-error');
+const downloadMp3Btn = document.getElementById('download-mp3-btn');
+const downloadVideoList = document.getElementById('download-video-list');
+const downloadThumb = document.getElementById('download-thumb');
+const downloadTitle = document.getElementById('download-title');
+const downloadMp3Size = document.getElementById('download-mp3-size');
+
+function formatFileSize(bytes) {
+  if (!bytes) return '';
+  if (bytes >= 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  return (bytes / 1024).toFixed(0) + ' KB';
+}
+
+async function openDownloadModal(video) {
+  if (!video || !video.id) return;
+  if (!downloadModal) return;
+
+  // Reset state
+  downloadLoading.style.display = 'block';
+  downloadOptions.style.display = 'none';
+  downloadError.style.display = 'none';
+  downloadThumb.src = video.thumbnail || `https://i.ytimg.com/vi/${video.id}/hqdefault.jpg`;
+  downloadTitle.textContent = video.title || 'Video';
+  downloadModal.classList.add('active');
+
+  try {
+    const res = await fetch(`/api/download-info/${video.id}`);
+    const data = await res.json();
+
+    if (data.error) {
+      downloadLoading.style.display = 'none';
+      downloadError.style.display = 'block';
+      downloadError.textContent = data.error;
+      return;
+    }
+
+    // MP3 butonu — API + proxy ile indir
+    if (downloadMp3Btn) {
+      if (downloadMp3Size) downloadMp3Size.textContent = formatFileSize(data.mp3?.size);
+      downloadMp3Btn.onclick = () => {
+        if (data.mp3?.url) {
+          triggerProxyDownload(data.mp3.url, `${(data.title||video.title||'audio').replace(/[^\w\s-]/g,'').trim()}.mp3`);
+        } else {
+          showToast('MP3 linki alınamadı');
+        }
+      };
+      downloadMp3Btn.style.display = 'flex';
+    }
+
+    // Video butonları — API + proxy ile indir
+    if (downloadVideoList) {
+      downloadVideoList.innerHTML = '';
+      (data.videos || []).forEach(v => {
+        const btn = document.createElement('button');
+        btn.className = 'download-option-btn';
+        btn.innerHTML = `
+          <div style="display:flex;align-items:center;gap:10px;">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="#f44336"><path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-8 12.5v-9l6 4.5-6 4.5z"></path></svg>
+            <span>${v.quality} MP4</span>
+          </div>
+          <span class="download-size-badge">${formatFileSize(v.size)}</span>
+        `;
+        const safeTitle = (data.title || video.title || 'video').replace(/[^\w\s-]/g, '').trim();
+        btn.onclick = () => triggerProxyDownload(v.url, `${safeTitle}_${v.quality}.mp4`);
+        downloadVideoList.appendChild(btn);
+      });
+    }
+
+    downloadLoading.style.display = 'none';
+    downloadOptions.style.display = 'block';
+  } catch (err) {
+    downloadLoading.style.display = 'none';
+    downloadError.style.display = 'block';
+    downloadError.textContent = 'İndirme bilgisi alınamadı. Lütfen tekrar deneyin.';
+  }
+}
+
+// API + proxy ile direkt indir
+function triggerProxyDownload(url, filename) {
+  showToast('İndirme başladı ⬇️');
+  downloadModal.classList.remove('active');
+  const proxyUrl = `/api/proxy-download?url=${encodeURIComponent(url)}&filename=${encodeURIComponent(filename)}`;
+  const a = document.createElement('a');
+  a.href = proxyUrl;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
+function triggerDownload(url, filename, isDirectLink) {
+  showToast('İndirme başladı ⬇️');
+  downloadModal.classList.remove('active');
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
+if (downloadModalClose) {
+  downloadModalClose.addEventListener('click', () => downloadModal.classList.remove('active'));
+}
+if (downloadModal) {
+  downloadModal.addEventListener('click', (e) => {
+    if (e.target === downloadModal) downloadModal.classList.remove('active');
+  });
+}
+if (watchDownloadBtn) {
+  watchDownloadBtn.addEventListener('click', () => {
+    if (currentPlayingVideo) openDownloadModal(currentPlayingVideo);
+    else showToast('Önce bir video seçin');
+  });
 }
 
 function renderQueue() {
