@@ -2922,14 +2922,27 @@ function renderReelsFeed(videos) {
     const isLiked = reelsLikedSet.has(v.id);
 
     item.innerHTML = `
-      <!-- TikTok Embed Player (lazy — loads on scroll) -->
-      <div class="reel-embed-wrap" data-src="${escapeHtml(v.embedUrl || `https://www.tiktok.com/embed/v2/${v.id}`)}">
-        <!-- Thumbnail shown until iframe loads -->
-        <img class="reel-bg reel-thumb-placeholder" src="${escapeHtml(v.cover || `https://picsum.photos/seed/${v.id}/400/700`)}" alt="${escapeHtml(v.author)}">
-        <div class="reel-embed-loader">
-          <div class="reels-spinner"></div>
-        </div>
+      <!-- Video Player -->
+      <video
+        class="reel-video"
+        src="${escapeHtml(v.videoUrl)}"
+        poster="${escapeHtml(v.cover || '')}"
+        playsinline
+        loop
+        preload="none"
+        webkit-playsinline
+      ></video>
+
+      <!-- Loading spinner (shown until video plays) -->
+      <div class="reel-video-loader">
+        <div class="reels-spinner"></div>
       </div>
+
+      <!-- Mute toggle -->
+      <button class="reel-mute-btn" title="Sesi Aç/Kapat">
+        <svg class="reel-mute-icon-on" viewBox="0 0 24 24" width="20" height="20" fill="#fff"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"></path></svg>
+        <svg class="reel-mute-icon-off" viewBox="0 0 24 24" width="20" height="20" fill="#fff" style="display:none;"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"></path></svg>
+      </button>
 
       <!-- TikTok badge -->
       <div class="reel-tiktok-badge">
@@ -2937,10 +2950,10 @@ function renderReelsFeed(videos) {
         <span>TikTok</span>
       </div>
 
-      <!-- Right actions (overlay over iframe — pointer-events none on bg) -->
+      <!-- Right actions -->
       <div class="reel-actions">
         <div class="reel-avatar-wrap">
-          <img class="reel-avatar" src="${escapeHtml(v.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(v.author)}&background=fe2c55&color=fff&size=128&bold=true`)}" alt="${escapeHtml(v.author)}" onerror="this.src='https://ui-avatars.com/api/?name=TT&background=fe2c55&color=fff&size=128&bold=true'">
+          <img class="reel-avatar" src="${escapeHtml(v.avatar)}" alt="${escapeHtml(v.author)}" onerror="this.src='https://ui-avatars.com/api/?name=TK&background=fe2c55&color=fff&size=128&bold=true'">
           <div class="reel-follow-dot">
             <svg viewBox="0 0 24 24" width="10" height="10" fill="#fff"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"></path></svg>
           </div>
@@ -2960,7 +2973,7 @@ function renderReelsFeed(videos) {
           <span class="reel-action-count">${escapeHtml(v.comments)}</span>
         </button>
 
-        <button class="reel-action-btn reel-share-btn" data-author="${escapeHtml(v.author)}" data-desc="${escapeHtml(v.desc || '')}">
+        <button class="reel-action-btn reel-share-btn" data-author="${escapeHtml(v.author)}">
           <div class="reel-action-icon">
             <svg viewBox="0 0 24 24" width="22" height="22"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92 1.61 0 2.92-1.31 2.92-2.92s-1.31-2.92-2.92-2.92z"></path></svg>
           </div>
@@ -2968,19 +2981,70 @@ function renderReelsFeed(videos) {
         </button>
       </div>
 
-      <!-- Bottom info (shown before/under the iframe) -->
+      <!-- Bottom info -->
       <div class="reel-info">
-        <div class="reel-author">${escapeHtml(v.author)}</div>
+        <div class="reel-author">${escapeHtml(v.nickname || v.author)}</div>
         <div class="reel-desc">${escapeHtml(v.desc || '')}</div>
         <div class="reel-music-row">
           <svg class="reel-music-icon" viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"></path></svg>
-          <span class="reel-music-text">Orijinal ses - ${escapeHtml(v.author)}</span>
+          <span class="reel-music-text">${escapeHtml(v.music || 'Orijinal ses')}${v.musicAuthor ? ' - ' + v.musicAuthor : ''}</span>
         </div>
       </div>
 
       <!-- Progress bar -->
       <div class="reel-progress"><div class="reel-progress-bar"></div></div>
     `;
+
+    // === Video oynatma mantığı ===
+    const videoEl = item.querySelector('.reel-video');
+    const loaderEl = item.querySelector('.reel-video-loader');
+    const muteBtn = item.querySelector('.reel-mute-btn');
+    const muteIconOn = muteBtn?.querySelector('.reel-mute-icon-on');
+    const muteIconOff = muteBtn?.querySelector('.reel-mute-icon-off');
+    const bar = item.querySelector('.reel-progress-bar');
+
+    if (videoEl) {
+      videoEl.muted = true; // iOS autoplay için muted gerekli
+
+      videoEl.addEventListener('canplay', () => {
+        if (loaderEl) loaderEl.style.display = 'none';
+      });
+
+      videoEl.addEventListener('timeupdate', () => {
+        if (videoEl.duration && bar) {
+          bar.style.transition = 'none';
+          bar.style.width = ((videoEl.currentTime / videoEl.duration) * 100) + '%';
+        }
+      });
+
+      videoEl.addEventListener('ended', () => {
+        if (bar) { bar.style.width = '0%'; }
+      });
+
+      // Tıklayınca pause/play
+      videoEl.addEventListener('click', () => {
+        if (videoEl.paused) {
+          videoEl.play().catch(() => {});
+        } else {
+          videoEl.pause();
+        }
+        try { navigator.vibrate?.(8); } catch (_) {}
+      });
+    }
+
+    // Mute toggle
+    if (muteBtn && videoEl) {
+      muteBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        videoEl.muted = !videoEl.muted;
+        if (muteIconOn) muteIconOn.style.display = videoEl.muted ? '' : 'none';
+        if (muteIconOff) muteIconOff.style.display = videoEl.muted ? 'none' : '';
+        // Tüm diğer reel videolarını da mute/unmute et
+        document.querySelectorAll('.reel-video').forEach(vEl => {
+          vEl.muted = videoEl.muted;
+        });
+      });
+    }
 
     // Like button
     const likeBtn = item.querySelector('.reel-like-btn');
@@ -3006,13 +3070,13 @@ function renderReelsFeed(videos) {
       });
     }
 
-    // Comment button
+    // Comment
     item.querySelector('.reel-comment-btn')?.addEventListener('click', (e) => {
       e.stopPropagation();
       showToast('Yorumlar yakında 💬');
     });
 
-    // Share button
+    // Share
     const shareBtn = item.querySelector('.reel-share-btn');
     if (shareBtn) {
       shareBtn.addEventListener('click', (e) => {
@@ -3041,49 +3105,41 @@ function renderReelsFeed(videos) {
   `;
   reelsFeed.appendChild(endCard);
 
-  // Intersection Observer — iframe'i sadece görünürken yükle (lazy embed)
+  // Intersection Observer — görünen videoyu oynat, diğerlerini durdur
   const observer = new IntersectionObserver((entries) => {
     entries.forEach(entry => {
-      const wrap = entry.target.querySelector('.reel-embed-wrap');
-      const bar = entry.target.querySelector('.reel-progress-bar');
+      const vEl = entry.target.querySelector('.reel-video');
+      const loader = entry.target.querySelector('.reel-video-loader');
+      const progressBar = entry.target.querySelector('.reel-progress-bar');
 
       if (entry.isIntersecting) {
-        // iframe henüz yüklenmemişse yükle
-        if (wrap && !wrap.querySelector('iframe')) {
-          const src = wrap.getAttribute('data-src');
-          if (src) {
-            const iframe = document.createElement('iframe');
-            iframe.src = src;
-            iframe.allow = 'autoplay; fullscreen; encrypted-media; picture-in-picture';
-            iframe.allowFullscreen = true;
-            iframe.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;border:none;background:#000;';
-            iframe.setAttribute('scrolling', 'no');
-            iframe.onload = () => {
-              const loader = wrap.querySelector('.reel-embed-loader');
-              const thumb = wrap.querySelector('.reel-thumb-placeholder');
+        // Videoyu yükle ve oynat
+        if (vEl) {
+          if (!vEl.src && vEl.getAttribute('data-src')) {
+            vEl.src = vEl.getAttribute('data-src');
+          }
+          vEl.load();
+          const playPromise = vEl.play();
+          if (playPromise) {
+            playPromise.catch(() => {
+              // Autoplay engellendi — kullanıcı dokununcaya kadar bekle
               if (loader) loader.style.display = 'none';
-              if (thumb) thumb.style.opacity = '0';
-            };
-            wrap.appendChild(iframe);
+            });
           }
         }
-        // Progress bar
-        if (bar) {
-          bar.style.transition = 'none';
-          bar.style.width = '0%';
-          setTimeout(() => {
-            bar.style.transition = 'width 60s linear';
-            bar.style.width = '100%';
-          }, 100);
-        }
       } else {
-        if (bar) {
-          bar.style.transition = 'none';
-          bar.style.width = '0%';
+        // Görünürden çıktı — durdur ve sıfırla
+        if (vEl) {
+          vEl.pause();
+          vEl.currentTime = 0;
+        }
+        if (progressBar) {
+          progressBar.style.transition = 'none';
+          progressBar.style.width = '0%';
         }
       }
     });
-  }, { threshold: 0.5, rootMargin: '0px' });
+  }, { threshold: 0.6 });
 
   reelsFeed.querySelectorAll('.reel-item').forEach(el => observer.observe(el));
 }

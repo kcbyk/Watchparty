@@ -2849,6 +2849,52 @@ svg {
   background: rgba(0,0,0,0.3);
 }
 
+/* Native video element */
+.reel-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  background: #000;
+  cursor: pointer;
+}
+
+/* Video loading overlay */
+.reel-video-loader {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3;
+  pointer-events: none;
+  background: rgba(0,0,0,0.25);
+}
+
+/* Mute button */
+.reel-mute-btn {
+  position: absolute;
+  top: 62px;
+  left: 12px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(0,0,0,0.45);
+  backdrop-filter: blur(6px);
+  border: none;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 5;
+  transition: background 0.15s ease;
+}
+.reel-mute-btn:hover {
+  background: rgba(0,0,0,0.65);
+}
+
 /* ─── Right Action Buttons (TikTok style) ────────────────────────────────── */
 .reel-actions {
   position: absolute;

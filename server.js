@@ -856,80 +856,145 @@ app.get('/api/search', async (req, res) => {
   }
 });
 
-// ─── TikTok Trending Feed Route ─────────────────────────────────────────────
-// Gerçek TikTok video ID'leri — TikTok embed/v2 ile oynatılır (resmi yöntem)
-const TIKTOK_SEED_VIDEOS = [
-  { id: '7318754890935768362', author: '@khaby.lame', avatar: 'https://p16-sign-va.tiktokcdn.com/musically-maliva-obj/1594805258216454~c5_100x100.jpeg', desc: 'When you overthink it 😂 #khaby #funny #fyp', likes: '54.2M', comments: '312K', shares: '2.1M' },
-  { id: '7341902174393907498', author: '@charlidamelio', avatar: 'https://p16-sign-va.tiktokcdn.com/musically-maliva-obj/1645881687489541~c5_100x100.jpeg', desc: 'New dance challenge 💃 #dance #trending #charli', likes: '38.7M', comments: '280K', shares: '1.8M' },
-  { id: '7320011698927133994', author: '@belalindnerfp', avatar: 'https://ui-avatars.com/api/?name=BL&background=fe2c55&color=fff&size=128&bold=true&format=svg', desc: 'POV: Monday morning 😴 #relatable #funny #pov', likes: '12.4M', comments: '87K', shares: '430K' },
-  { id: '7298029002808059178', author: '@foodwithsoy', avatar: 'https://ui-avatars.com/api/?name=FW&background=e76f51&color=fff&size=128&bold=true&format=svg', desc: 'The best 5-minute pasta 🍝 #cooking #food #recipe', likes: '8.9M', comments: '54K', shares: '920K' },
-  { id: '7311766738849750274', author: '@doingthings', avatar: 'https://ui-avatars.com/api/?name=DT&background=2a9d8f&color=fff&size=128&bold=true&format=svg', desc: 'This cat has no idea what she looks like 🐱 #cat #cute #animals', likes: '22.1M', comments: '143K', shares: '3.4M' },
-  { id: '7327384726481232170', author: '@traveltok', avatar: 'https://ui-avatars.com/api/?name=TT&background=457b9d&color=fff&size=128&bold=true&format=svg', desc: 'Hidden beach in Turkey 🌊 #travel #turkey #explore #fyp', likes: '6.3M', comments: '41K', shares: '780K' },
-  { id: '7302671174428018986', author: '@gymtok', avatar: 'https://ui-avatars.com/api/?name=GT&background=264653&color=fff&size=128&bold=true&format=svg', desc: '30 day transformation 💪 #gym #fitness #motivation', likes: '15.8M', comments: '102K', shares: '1.2M' },
-  { id: '7314557339475254570', author: '@beautytips', avatar: 'https://ui-avatars.com/api/?name=BT&background=e9c46a&color=000&size=128&bold=true&format=svg', desc: 'Viral makeup hack that actually works ✨ #makeup #beauty #tutorial', likes: '19.4M', comments: '167K', shares: '2.7M' },
-  { id: '7295840124558468394', author: '@techthings', avatar: 'https://ui-avatars.com/api/?name=TC&background=6e5494&color=fff&size=128&bold=true&format=svg', desc: 'This phone trick will change your life 📱 #tech #lifehack #iphone', likes: '31.2M', comments: '241K', shares: '4.1M' },
-  { id: '7308203819577268522', author: '@musicviral', avatar: 'https://ui-avatars.com/api/?name=MV&background=52b788&color=fff&size=128&bold=true&format=svg', desc: 'Made this beat in 5 minutes 🎵 #music #producer #viral', likes: '9.7M', comments: '63K', shares: '1.1M' },
-  { id: '7319876542103847210', author: '@comedy_clips', avatar: 'https://ui-avatars.com/api/?name=CC&background=f4a261&color=fff&size=128&bold=true&format=svg', desc: 'Wait for it... 😂 #comedy #funny #laugh #fyp', likes: '41.5M', comments: '298K', shares: '5.2M' },
-  { id: '7312098765432109876', author: '@naturetok', avatar: 'https://ui-avatars.com/api/?name=NT&background=2a9d8f&color=fff&size=128&bold=true&format=svg', desc: 'Soothing nature sounds 🌿 #nature #relax #peaceful #asmr', likes: '7.2M', comments: '48K', shares: '890K' }
+// ─── TikTok Feed Route — TokApi Mobile Version (Gerçek videolar) ─────────────
+const TOKAPI_KEY = process.env.TOKAPI_KEY || 'adc4b7af04mshadb5aab86d5eff7p1946e8jsn61fbc4deba81';
+const TOKAPI_HOST = 'tokapi-mobile-version.p.rapidapi.com';
+
+// Popüler TikTok hesaplarının user ID'leri (trending içerik üretiyorlar)
+const TIKTOK_POPULAR_ACCOUNTS = [
+  '208464585232822272',  // Nike
+  '5738659960541405189', // NASA
+  '6569595380449902597', // NBA
+  '107955',              // TikTok official
+  '96783980076438528',   // Red Bull
+  '314539396',           // ESPN
+  '298885955',           // CNN
+  '78163718308421632',   // BuzzFeed
+  '6909763490994028546', // BBC
+  '7168534952995324974', // Dua Lipa
 ];
 
-// TikTok oEmbed ile metadata çek (resmi API — ücretsiz)
-async function fetchTikTokOembed(videoId) {
+// Video URL'leri birkaç saatte bir expire olur — proxy üzerinden sun
+app.get('/api/tiktok-proxy-video', async (req, res) => {
+  const { url } = req.query;
+  if (!url) return res.status(400).send('URL gerekli');
   try {
-    const url = `https://www.tiktok.com/oembed?url=https://www.tiktok.com/video/${videoId}`;
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 4000);
-    const res = await fetch(url, {
-      signal: controller.signal,
-      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; WatchParty/1.0)' }
+    const decoded = decodeURIComponent(url);
+    const upstream = await fetch(decoded, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15',
+        'Referer': 'https://www.tiktok.com/',
+        'Accept': 'video/mp4,video/*;q=0.9,*/*;q=0.8',
+        'Range': req.headers.range || 'bytes=0-'
+      }
     });
-    clearTimeout(timer);
-    if (!res.ok) return null;
-    return await res.json();
-  } catch (_) {
-    return null;
+    if (!upstream.ok) return res.status(upstream.status).send('Video yüklenemedi');
+
+    res.setHeader('Content-Type', upstream.headers.get('content-type') || 'video/mp4');
+    res.setHeader('Accept-Ranges', 'bytes');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    const cl = upstream.headers.get('content-length');
+    const cr = upstream.headers.get('content-range');
+    if (cl) res.setHeader('Content-Length', cl);
+    if (cr) res.setHeader('Content-Range', cr);
+    res.status(upstream.status === 206 ? 206 : 200);
+
+    const { Readable } = require('stream');
+    if (upstream.body && typeof upstream.body.getReader === 'function') {
+      Readable.fromWeb(upstream.body).pipe(res);
+    } else {
+      const buf = await upstream.arrayBuffer();
+      res.end(Buffer.from(buf));
+    }
+  } catch (err) {
+    console.warn('[TikTok Proxy Video Error]', err.message);
+    if (!res.headersSent) res.status(500).send('Proxy hatası');
   }
-}
+});
 
 app.get('/api/tiktok-feed', async (req, res) => {
   res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
   res.setHeader('Pragma', 'no-cache');
 
   try {
-    // oEmbed ile her video için metadata al (paralel, timeout korumalı)
-    const enriched = await Promise.allSettled(
-      TIKTOK_SEED_VIDEOS.map(async (v) => {
-        const meta = await fetchTikTokOembed(v.id);
-        return {
-          id: v.id,
-          embedUrl: `https://www.tiktok.com/embed/v2/${v.id}`,
-          author: meta?.author_name ? '@' + meta.author_name.replace(/^@/, '') : v.author,
-          avatar: meta?.thumbnail_url || v.avatar,
-          desc: meta?.title || v.desc,
-          likes: v.likes,
-          comments: v.comments,
-          shares: v.shares,
-          cover: meta?.thumbnail_url || `https://picsum.photos/seed/${v.id}/400/700`
-        };
-      })
-    );
+    // Rastgele 3 hesap seç — her seferinde farklı içerik
+    const shuffled = [...TIKTOK_POPULAR_ACCOUNTS].sort(() => Math.random() - 0.5).slice(0, 3);
 
-    const result = enriched
-      .filter(r => r.status === 'fulfilled')
-      .map(r => r.value);
+    const allVideos = [];
 
-    console.log(`[TikTok Feed] ${result.length} videos with embed URLs`);
-    return res.json(result.length > 0 ? result : TIKTOK_SEED_VIDEOS.map(v => ({
-      ...v,
-      embedUrl: `https://www.tiktok.com/embed/v2/${v.id}`
-    })));
+    for (const userId of shuffled) {
+      try {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 8000);
+        const r = await fetch(
+          `https://${TOKAPI_HOST}/v1/post/user/${userId}/posts?offset=0&count=6&region=TR&with_pinned_posts=1`,
+          {
+            signal: controller.signal,
+            headers: {
+              'Content-Type': 'application/json',
+              'x-rapidapi-host': TOKAPI_HOST,
+              'x-rapidapi-key': TOKAPI_KEY
+            }
+          }
+        );
+        clearTimeout(timer);
+        if (!r.ok) continue;
+
+        const data = await r.json();
+        const items = data?.aweme_list || [];
+
+        for (const v of items) {
+          // Sadece normal video (type 0) al, ads ve fotoğraf kolajları atla
+          if (v.aweme_type !== 0 && v.aweme_type !== 68) continue;
+
+          const playUrls = v.video?.play_addr?.url_list || v.video?.play_addr_h264?.url_list || [];
+          const coverUrls = v.video?.origin_cover?.url_list || v.video?.cover?.url_list || [];
+          const dynamicCoverUrls = v.video?.dynamic_cover?.url_list || [];
+          const avatarUrls = v.author?.avatar_larger?.url_list || v.author?.avatar_medium?.url_list || [];
+
+          if (playUrls.length === 0) continue;
+
+          const stats = v.statistics || {};
+          allVideos.push({
+            id: v.aweme_id,
+            author: '@' + (v.author?.unique_id || v.author?.nickname || 'tiktok').replace(/^@/, ''),
+            nickname: v.author?.nickname || v.author?.unique_id || 'TikTok',
+            avatar: avatarUrls[0] || `https://ui-avatars.com/api/?name=TK&background=fe2c55&color=fff&size=128&bold=true&format=svg`,
+            desc: v.desc || '',
+            videoUrl: `/api/tiktok-proxy-video?url=${encodeURIComponent(playUrls[0])}`,
+            cover: coverUrls[0] || dynamicCoverUrls[0] || '',
+            dynamicCover: dynamicCoverUrls[0] || '',
+            likes: formatCount(stats.digg_count || 0),
+            comments: formatCount(stats.comment_count || 0),
+            shares: formatCount(stats.share_count || 0),
+            plays: formatCount(stats.play_count || 0),
+            duration: v.video?.duration || 0,
+            music: v.music?.title || 'Orijinal ses',
+            musicAuthor: v.music?.author || v.author?.nickname || ''
+          });
+        }
+      } catch (e) {
+        console.warn(`[TikTok Feed] Account ${userId} error:`, e.message);
+      }
+    }
+
+    // Karıştır — farklı hesaplardan sırayla gelsin
+    for (let i = allVideos.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [allVideos[i], allVideos[j]] = [allVideos[j], allVideos[i]];
+    }
+
+    if (allVideos.length === 0) {
+      console.warn('[TikTok Feed] No videos found, sending empty');
+      return res.json([]);
+    }
+
+    console.log(`[TikTok Feed] ${allVideos.length} real videos returned`);
+    res.json(allVideos.slice(0, 20));
 
   } catch (err) {
-    console.warn('[TikTok Feed] Error:', err.message);
-    res.json(TIKTOK_SEED_VIDEOS.map(v => ({
-      ...v,
-      embedUrl: `https://www.tiktok.com/embed/v2/${v.id}`
-    })));
+    console.error('[TikTok Feed Error]', err.message);
+    res.json([]);
   }
 });
 
