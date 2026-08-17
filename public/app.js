@@ -410,6 +410,10 @@ function openWatchView(video) {
   }
   currentWatchSidebarTab = 'related';
 
+  // Setup Media Session API for lock screen / notification controls
+  setupMediaSession(video);
+  updateMediaSessionState('playing');
+
   // Fetch and render recommended videos on the right sidebar (Screenshot match)
   fetchAndRenderRelated(video.title || video.author || 'müzik');
 }
@@ -857,14 +861,19 @@ window.onYouTubeIframeAPIReady = function() {
         if (s === YT.PlayerState.PLAYING) {
           isPlaying = true;
           updatePlayIcon(true);
+          updateMediaSessionState('playing');
+          updateMediaSessionPosition();
           if (socket && socket.connected) socket.emit('video-play', player.getCurrentTime());
         } else if (s === YT.PlayerState.PAUSED) {
           isPlaying = false;
           updatePlayIcon(false);
+          updateMediaSessionState('paused');
+          updateMediaSessionPosition();
           if (socket && socket.connected) socket.emit('video-pause', player.getCurrentTime());
         } else if (s === YT.PlayerState.ENDED) {
           isPlaying = false;
           updatePlayIcon(false);
+          updateMediaSessionState('none');
           if (socket && socket.connected) socket.emit('video-ended');
         }
       }
@@ -946,6 +955,143 @@ function _loadVideoViaIframe(videoId) {
 
 function updatePlayIcon(playing) {
   // Watch page uses YouTube iframe native controls
+  updateMediaSessionState(playing ? 'playing' : 'paused');
+}
+
+// ─── Media Session API (Lock Screen / Notification Controls) ───────────────
+let mediaSessionPositionInterval = null;
+
+function setupMediaSession(video) {
+  if (!('mediaSession' in navigator) || !video) return;
+
+  const artwork = [
+    { src: video.thumbnail || '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
+    { src: video.thumbnail || '/icons/icon-512.png', sizes: '512x512', type: 'image/png' }
+  ];
+
+  try {
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: video.title || 'WatchParty',
+      artist: video.author || 'YouTube',
+      album: 'WatchParty',
+      artwork
+    });
+  } catch(e) {}
+
+  // Action Handlers — next/previous track via queue
+  navigator.mediaSession.setActionHandler('play', () => {
+    try { if (player && typeof player.playVideo === 'function') player.playVideo(); } catch(_) {}
+    updateMediaSessionState('playing');
+  });
+
+  navigator.mediaSession.setActionHandler('pause', () => {
+    try { if (player && typeof player.pauseVideo === 'function') player.pauseVideo(); } catch(_) {}
+    updateMediaSessionState('paused');
+  });
+
+  navigator.mediaSession.setActionHandler('stop', () => {
+    try { if (player && typeof player.stopVideo === 'function') player.stopVideo(); } catch(_) {}
+    updateMediaSessionState('paused');
+  });
+
+  navigator.mediaSession.setActionHandler('seekbackward', (details) => {
+    try {
+      if (!player || typeof player.getCurrentTime !== 'function') return;
+      const skipTime = details.seekOffset || 10;
+      const newTime = Math.max(0, player.getCurrentTime() - skipTime);
+      player.seekTo(newTime, true);
+      if (socket && socket.connected) socket.emit('video-seek', newTime);
+      updateMediaSessionPosition();
+    } catch(_) {}
+  });
+
+  navigator.mediaSession.setActionHandler('seekforward', (details) => {
+    try {
+      if (!player || typeof player.getCurrentTime !== 'function') return;
+      const skipTime = details.seekOffset || 10;
+      const dur = player.getDuration ? (player.getDuration() || 9999) : 9999;
+      const newTime = Math.min(dur, player.getCurrentTime() + skipTime);
+      player.seekTo(newTime, true);
+      if (socket && socket.connected) socket.emit('video-seek', newTime);
+      updateMediaSessionPosition();
+    } catch(_) {}
+  });
+
+  navigator.mediaSession.setActionHandler('seekto', (details) => {
+    try {
+      if (!player || typeof player.seekTo !== 'function') return;
+      if (details.fastSeek && 'fastSeek' in player) {
+        player.seekTo(details.seekTime, false);
+      } else {
+        player.seekTo(details.seekTime, true);
+      }
+      if (socket && socket.connected) socket.emit('video-seek', details.seekTime);
+      updateMediaSessionPosition();
+    } catch(_) {}
+  });
+
+  // Next Track — emit socket skip to play next queue item
+  try {
+    navigator.mediaSession.setActionHandler('nexttrack', () => {
+      if (socket && socket.connected) socket.emit('skip');
+      showToast('Sonraki şarkıya geçildi ⏭️');
+    });
+  } catch(_) {}
+
+  // Previous Track — restart current or go back (restart within 5s, then previous)
+  try {
+    navigator.mediaSession.setActionHandler('previoustrack', () => {
+      try {
+        if (!player || typeof player.getCurrentTime !== 'function') return;
+        const currentTime = player.getCurrentTime();
+        if (currentTime > 5) {
+          player.seekTo(0, true);
+          if (socket && socket.connected) socket.emit('video-seek', 0);
+          showToast('Başa alındı ⏮️');
+        } else {
+          if (socket && socket.connected) socket.emit('previous-track');
+          showToast('Önceki şarkı ⏮️');
+        }
+        updateMediaSessionPosition();
+      } catch(_) {}
+    });
+  } catch(_) {}
+
+  // Start position tracking interval for lock screen seek bar
+  startMediaSessionPositionTracking();
+}
+
+function updateMediaSessionState(state) {
+  if (!('mediaSession' in navigator)) return;
+  try {
+    navigator.mediaSession.playbackState = state; // 'playing' | 'paused' | 'none'
+  } catch(_) {}
+}
+
+function updateMediaSessionPosition() {
+  if (!('mediaSession' in navigator) || !player) return;
+  try {
+    if (typeof player.getCurrentTime !== 'function' || typeof player.getDuration !== 'function') return;
+    const position = player.getCurrentTime();
+    const duration = player.getDuration();
+    const playbackRate = player.getPlaybackRate ? (player.getPlaybackRate() || 1.0) : 1.0;
+    if (duration && duration > 0) {
+      navigator.mediaSession.setPositionState({
+        duration,
+        playbackRate,
+        position: Math.min(position, duration)
+      });
+    }
+  } catch(_) {}
+}
+
+function startMediaSessionPositionTracking() {
+  if (mediaSessionPositionInterval) clearInterval(mediaSessionPositionInterval);
+  mediaSessionPositionInterval = setInterval(() => {
+    if (isPlaying && player && playerReady) {
+      updateMediaSessionPosition();
+    }
+  }, 1000);
 }
 
 // ─── Header & Navigation Event Listeners ─────────────────────────────────
