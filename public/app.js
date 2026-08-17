@@ -863,17 +863,24 @@ window.onYouTubeIframeAPIReady = function() {
           updatePlayIcon(true);
           updateMediaSessionState('playing');
           updateMediaSessionPosition();
+          // Arka plan ses oturumunu başlat / ekranı uyandır
+          startBackgroundAudioSession();
+          requestWakeLock().catch(() => {});
           if (socket && socket.connected) socket.emit('video-play', player.getCurrentTime());
         } else if (s === YT.PlayerState.PAUSED) {
           isPlaying = false;
           updatePlayIcon(false);
           updateMediaSessionState('paused');
           updateMediaSessionPosition();
+          // Kilit ekranında kullanıcı durdurduğunda WakeLock serbest bırak
+          releaseWakeLock();
           if (socket && socket.connected) socket.emit('video-pause', player.getCurrentTime());
         } else if (s === YT.PlayerState.ENDED) {
           isPlaying = false;
           updatePlayIcon(false);
           updateMediaSessionState('none');
+          releaseWakeLock();
+          stopBackgroundAudioSession();
           if (socket && socket.connected) socket.emit('video-ended');
         }
       }
@@ -1059,6 +1066,12 @@ function setupMediaSession(video) {
 
   // Start position tracking interval for lock screen seek bar
   startMediaSessionPositionTracking();
+
+  // AudioContext keep-alive: ses oturumunu aktif tut (kilit ekranı desteği)
+  startBackgroundAudioSession();
+
+  // WakeLock: Oynatma sırasında ekran kararmasını engelle
+  requestWakeLock().catch(() => {});
 }
 
 function updateMediaSessionState(state) {
@@ -1093,6 +1106,109 @@ function startMediaSessionPositionTracking() {
     }
   }, 1000);
 }
+
+// ─── Background Audio Keep-Alive (Prevents browser from suspending YouTube iframe) ─
+// Tarayıcı ses oturumu aktif olduğu sürece ekran kilitlense bile YouTube oynatmayı sürdürür.
+// Spotify, YouTube Music ve tüm profesyonel oynatıcılar bu tekniği kullanır.
+let _bgAudioCtx = null;
+let _bgGainNode = null;
+let _bgOscillator = null;
+let _bgKeepAliveInterval = null;
+let _wakeLock = null;
+
+function startBackgroundAudioSession() {
+  // Zaten çalışıyorsa tekrar başlatma
+  if (_bgAudioCtx && _bgAudioCtx.state === 'running') return;
+
+  try {
+    _bgAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+    // Gain 0.0001 — insan kulağının duyamayacağı kadar sessiz ama ses oturumu aktif
+    _bgGainNode = _bgAudioCtx.createGain();
+    _bgGainNode.gain.value = 0.0001;
+    _bgGainNode.connect(_bgAudioCtx.destination);
+
+    // Sabit 40Hz osilatör (bas frekansı, tamamen sessiz görünür)
+    _bgOscillator = _bgAudioCtx.createOscillator();
+    _bgOscillator.frequency.value = 40;
+    _bgOscillator.type = 'sine';
+    _bgOscillator.connect(_bgGainNode);
+    _bgOscillator.start();
+
+    console.log('[WatchParty] Arka plan ses oturumu başlatıldı — kilit ekranı desteği aktif');
+  } catch (e) {
+    console.warn('[WatchParty] AudioContext başlatılamadı:', e);
+  }
+
+  // AudioContext suspended olursa yeniden resume et (iOS Safari için kritik)
+  if (_bgKeepAliveInterval) clearInterval(_bgKeepAliveInterval);
+  _bgKeepAliveInterval = setInterval(() => {
+    if (_bgAudioCtx && _bgAudioCtx.state === 'suspended') {
+      _bgAudioCtx.resume().catch(() => {});
+    }
+  }, 2000);
+}
+
+function stopBackgroundAudioSession() {
+  try {
+    if (_bgOscillator) { _bgOscillator.stop(); _bgOscillator.disconnect(); }
+    if (_bgGainNode) _bgGainNode.disconnect();
+    if (_bgAudioCtx) _bgAudioCtx.close();
+  } catch (_) {}
+  _bgOscillator = null;
+  _bgGainNode = null;
+  _bgAudioCtx = null;
+  if (_bgKeepAliveInterval) clearInterval(_bgKeepAliveInterval);
+  _bgKeepAliveInterval = null;
+}
+
+// ─── Wake Lock API (Ekranın kararmasını engelle — opsiyonel) ─────────────────
+async function requestWakeLock() {
+  if (!('wakeLock' in navigator)) return;
+  try {
+    _wakeLock = await navigator.wakeLock.request('screen');
+    _wakeLock.addEventListener('release', () => {
+      console.log('[WatchParty] WakeLock serbest bırakıldı');
+    });
+    console.log('[WatchParty] WakeLock aktif — ekran kararma engellendi');
+  } catch (e) {
+    // Kilit ekranında WakeLock geri alınır, bu normaldir
+  }
+}
+
+async function releaseWakeLock() {
+  if (_wakeLock) {
+    try { await _wakeLock.release(); } catch (_) {}
+    _wakeLock = null;
+  }
+}
+
+// ─── Visibility Change — Ekran kilidi açıldığında oynatmayı devam ettir ──────
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') {
+    // Sayfa tekrar görünür oldu — AudioContext'i yeniden etkinleştir
+    if (_bgAudioCtx && _bgAudioCtx.state === 'suspended') {
+      _bgAudioCtx.resume().catch(() => {});
+    }
+    // YouTube player askıya alındıysa devam ettir
+    if (isPlaying && player && playerReady) {
+      try {
+        const state = player.getPlayerState ? player.getPlayerState() : -1;
+        // 2 = PAUSED durumu — eğer biz pause yapmadıysak ama sistem duraklattıysa devam et
+        if (state === 2) {
+          setTimeout(() => {
+            try {
+              player.playVideo();
+              updateMediaSessionState('playing');
+            } catch (_) {}
+          }, 300);
+        }
+      } catch (_) {}
+    }
+    // WakeLock'u yeniden iste
+    if (isPlaying) requestWakeLock().catch(() => {});
+  }
+});
 
 // ─── Header & Navigation Event Listeners ─────────────────────────────────
 const sidebarToggleBtn = document.getElementById('sidebar-toggle-btn');
