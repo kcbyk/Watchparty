@@ -654,6 +654,28 @@ app.get('/api/search', async (req, res) => {
   }
 });
 
+// ─── Real-time YouTube Autocomplete Suggestions Route ───────────────────────
+app.get('/api/suggestions', async (req, res) => {
+  const q = (req.query.q || '').trim();
+  if (!q) return res.json([]);
+  try {
+    const response = await fetch(`https://suggestqueries.google.com/complete/search?client=firefox&ds=yt&q=${encodeURIComponent(q)}`, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+      }
+    });
+    if (response.ok) {
+      const data = await response.json();
+      if (Array.isArray(data[1])) {
+        return res.json(data[1].slice(0, 10));
+      }
+    }
+  } catch (err) {
+    console.warn('[Suggestions Error]', err.message);
+  }
+  res.json([]);
+});
+
 // ─── Socket.IO ────────────────────────────────────────────────────────────────
 
 io.on('connection', (socket) => {

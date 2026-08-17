@@ -2514,10 +2514,42 @@ svg {
 }
 
 .mob-suggest-arrow {
-  width: 20px;
-  height: 20px;
+  width: 28px;
+  height: 28px;
   color: var(--yt-text-secondary);
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.15s ease;
+}
+.mob-suggest-arrow:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.mob-suggest-delete-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: transparent;
+  border: none;
+  color: var(--yt-text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  opacity: 0.7;
+  transition: all 0.15s ease;
+  margin-left: 2px;
+}
+.mob-suggest-delete-btn:hover,
+.mob-suggest-delete-btn:active {
+  opacity: 1;
+  color: #ff4e45;
+  background: rgba(255, 78, 69, 0.15);
 }
 
 .mob-suggest-thumb {
@@ -2526,6 +2558,7 @@ svg {
   border-radius: 4px;
   object-fit: cover;
   flex-shrink: 0;
+  background: #222;
 }
 
 .mob-suggest-thumb-placeholder {

@@ -677,6 +677,11 @@ async function fetchAndRenderFeed(query, showSpinner = true) {
       return;
     }
 
+    // Arama geçmişine bu sorgunun gerçek video kapak görselini kaydet
+    if (videos[0]?.thumbnail) {
+      updateSearchHistoryThumbnail(currentFeedQuery, videos[0].thumbnail);
+    }
+
     renderVideoGrid(videos);
   } catch (err) {
     console.warn('[Feed Fetch Error - Using Fallback]', err);
@@ -804,6 +809,7 @@ if (searchForm) {
     e.preventDefault();
     const q = (searchInput?.value || '').trim();
     if (q) {
+      addSearchToHistory(q);
       openFeedView();
       fetchAndRenderFeed(q);
     }
@@ -1776,6 +1782,84 @@ if (btnLeaveRoom) {
   });
 }
 
+// ─── Search History & Mobile Full-Screen Search System ────────────────────
+const SEARCH_HISTORY_STORAGE_KEY = 'yt_search_history';
+
+// Default initial suggestions for brand new users (with working high-quality thumbnails)
+const DEFAULT_INITIAL_SUGGESTIONS = [
+  { text: 'galatasaray çorum',            thumb: 'https://i.ytimg.com/vi/09R8_2nJtjg/default.jpg', isHistory: true },
+  { text: 'ataberk doğan',                thumb: 'https://i.ytimg.com/vi/dQw4w9WgXcQ/default.jpg', isHistory: true },
+  { text: 'izliyor',                      thumb: 'https://i.ytimg.com/vi/kJQP7kiw5Fk/default.jpg', isHistory: true },
+  { text: 'wegh',                         thumb: 'https://i.ytimg.com/vi/fJ9rUzIMcZQ/default.jpg', isHistory: true },
+  { text: 'yapay zeka',                   thumb: 'https://i.ytimg.com/vi/JGwWNGJdvx8/default.jpg', isHistory: true },
+  { text: 'jahrein cenk bey',             thumb: 'https://i.ytimg.com/vi/OPf0YbXqDm0/default.jpg', isHistory: true },
+  { text: 'guldur guldur show',           thumb: 'https://i.ytimg.com/vi/RgKAFK5djSk/default.jpg', isHistory: true },
+  { text: 'fenerbahçe maç özeti',         thumb: 'https://i.ytimg.com/vi/hT_nvWreIhg/default.jpg', isHistory: true },
+  { text: 'kısmetse olur 4 sezon',        thumb: 'https://i.ytimg.com/vi/CevxZvSJLk8/default.jpg', isHistory: true },
+  { text: 'trabzonspor',                  thumb: 'https://i.ytimg.com/vi/uelHwf8o7_U/default.jpg', isHistory: true },
+  { text: 'yıldız tilbe',                 thumb: 'https://i.ytimg.com/vi/YQHsXMglC9A/default.jpg', isHistory: true },
+  { text: 'müslüm gürses',                thumb: 'https://i.ytimg.com/vi/9bZkp7q19f0/default.jpg', isHistory: true }
+];
+
+function getSearchHistory() {
+  try {
+    const raw = localStorage.getItem(SEARCH_HISTORY_STORAGE_KEY);
+    if (!raw) return DEFAULT_INITIAL_SUGGESTIONS;
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    return DEFAULT_INITIAL_SUGGESTIONS;
+  } catch (e) {
+    return DEFAULT_INITIAL_SUGGESTIONS;
+  }
+}
+
+function saveSearchHistory(history) {
+  try {
+    localStorage.setItem(SEARCH_HISTORY_STORAGE_KEY, JSON.stringify(history.slice(0, 30)));
+  } catch (e) {}
+}
+
+function addSearchToHistory(text, thumb = '') {
+  if (!text || typeof text !== 'string') return;
+  const clean = text.trim();
+  if (!clean) return;
+
+  let history = getSearchHistory();
+  const existing = history.find(item => item.text.toLowerCase() === clean.toLowerCase());
+  const finalThumb = thumb || existing?.thumb || '';
+
+  // Başa taşı veya ekle
+  history = history.filter(item => item.text.toLowerCase() !== clean.toLowerCase());
+  history.unshift({ text: clean, thumb: finalThumb, isHistory: true, time: Date.now() });
+
+  saveSearchHistory(history);
+}
+
+function removeSearchFromHistory(text) {
+  let history = getSearchHistory();
+  history = history.filter(item => item.text.toLowerCase() !== text.toLowerCase());
+  saveSearchHistory(history);
+  renderMobileSearchSuggestions();
+}
+
+function updateSearchHistoryThumbnail(query, thumb) {
+  if (!query || !thumb) return;
+  const clean = query.trim().toLowerCase();
+  let history = getSearchHistory();
+  let found = false;
+  history = history.map(item => {
+    if (item.text.toLowerCase() === clean) {
+      found = true;
+      return { ...item, thumb, isHistory: true };
+    }
+    return item;
+  });
+  if (!found) {
+    history.unshift({ text: query.trim(), thumb, isHistory: true, time: Date.now() });
+  }
+  saveSearchHistory(history);
+}
+
 // ─── Mobile Full-Screen Search & Suggestions (YouTube Mobile Style) ────────
 const mobileSearchTriggerBtn = document.getElementById('mobile-search-trigger-btn');
 const mobileSearchOverlay = document.getElementById('mobile-search-overlay');
@@ -1790,59 +1874,135 @@ const mobNavRoom = document.getElementById('mob-nav-room');
 const mobNavChat = document.getElementById('mob-nav-chat');
 const mobNavUsers = document.getElementById('mob-nav-users');
 
-// Her öneri: metin + sabit YouTube thumbnail
-const initialMobileSuggestions = [
-  { text: 'galatasaray çorum',            thumb: 'https://i.ytimg.com/vi/09R8_2nJtjg/default.jpg' },
-  { text: 'ataberk doğan',                thumb: 'https://i.ytimg.com/vi/dQw4w9WgXcQ/default.jpg' },
-  { text: 'izliyor',                      thumb: 'https://i.ytimg.com/vi/kJQP7kiw5Fk/default.jpg' },
-  { text: 'wegh',                         thumb: 'https://i.ytimg.com/vi/fJ9rUzIMcZQ/default.jpg' },
-  { text: 'yapay zeka',                   thumb: 'https://i.ytimg.com/vi/JGwWNGJdvx8/default.jpg' },
-  { text: 'jahrein cenk bey',             thumb: 'https://i.ytimg.com/vi/OPf0YbXqDm0/default.jpg' },
-  { text: 'guldur guldur show',           thumb: 'https://i.ytimg.com/vi/RgKAFK5djSk/default.jpg' },
-  { text: 'fenerbahçe maç özeti',         thumb: 'https://i.ytimg.com/vi/hT_nvWreIhg/default.jpg' },
-  { text: 'kısmetse olur 4 sezon',        thumb: 'https://i.ytimg.com/vi/CevxZvSJLk8/default.jpg' },
-  { text: 'trabzonspor',                  thumb: 'https://i.ytimg.com/vi/uelHwf8o7_U/default.jpg' },
-  { text: 'yıldız tilbe',                 thumb: 'https://i.ytimg.com/vi/YQHsXMglC9A/default.jpg' },
-  { text: 'müslüm gürses',                thumb: 'https://i.ytimg.com/vi/9bZkp7q19f0/default.jpg' },
-  { text: 'erkan kolçak köstendil',       thumb: 'https://i.ytimg.com/vi/OPf0YbXqDm0/default.jpg' },
-  { text: 'valorant fps arttırma unlost', thumb: 'https://i.ytimg.com/vi/09R8_2nJtjg/default.jpg' }
-];
+let suggestDebounceTimer = null;
 
-function renderMobileSearchSuggestions(items) {
+function renderMobileSearchSuggestions(customItems = null) {
   if (!mobSearchSuggestionsList) return;
   mobSearchSuggestionsList.innerHTML = '';
 
+  const items = customItems || getSearchHistory();
+
+  if (items.length === 0) {
+    mobSearchSuggestionsList.innerHTML = `
+      <div style="padding: 32px 16px; text-align: center; color: var(--yt-text-secondary); font-size: 14px;">
+        Arama geçmişiniz boş
+      </div>
+    `;
+    return;
+  }
+
   items.forEach(entry => {
-    const text  = typeof entry === 'string' ? entry : entry.text;
+    const text = typeof entry === 'string' ? entry : entry.text;
     const thumb = typeof entry === 'string' ? '' : (entry.thumb || '');
+    const isHistory = typeof entry === 'object' && (entry.isHistory !== false);
 
     const item = document.createElement('div');
     item.className = 'mob-suggest-item';
+
+    const iconSvg = isHistory
+      ? `<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+           <path d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/>
+         </svg>`
+      : `<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+           <path d="M20.87 20.17l-5.59-5.59C16.35 13.35 17 11.75 17 10c0-3.87-3.13-7-7-7s-7 3.13-7 7 3.13 7 7 7c1.75 0 3.35-.65 4.58-1.71l5.59 5.59.7-.71zM10 16c-3.31 0-6-2.69-6-6s2.69-6 6-6 6 2.69 6 6-2.69 6-6 6z"/>
+         </svg>`;
+
     item.innerHTML = `
-      <div class="mob-suggest-icon">
-        <svg viewBox="0 0 24 24" width="18" height="18" fill="#aaa">
-          <path d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9z"/>
-        </svg>
-      </div>
+      <div class="mob-suggest-icon">${iconSvg}</div>
       <div class="mob-suggest-text">${escapeHtml(text)}</div>
       ${thumb
         ? `<img class="mob-suggest-thumb" src="${escapeHtml(thumb)}" alt="" onerror="this.style.display='none'">`
         : `<div class="mob-suggest-thumb-placeholder"></div>`
       }
-      <div class="mob-suggest-arrow">
-        <svg viewBox="0 0 24 24" width="18" height="18" fill="#aaa"><path d="M9 5v2h6.59L4 18.59 5.41 20 17 8.41V15h2V5z"></path></svg>
-      </div>
+      <button class="mob-suggest-arrow" title="Aramaya Ekle" type="button">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M9 5v2h6.59L4 18.59 5.41 20 17 8.41V15h2V5z"></path></svg>
+      </button>
+      ${isHistory 
+        ? `<button class="mob-suggest-delete-btn" title="Geçmişten Kaldır" type="button">
+             <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+           </button>`
+        : ''
+      }
     `;
 
+    // 1. Arrow click -> fill input without closing
+    const arrowBtn = item.querySelector('.mob-suggest-arrow');
+    if (arrowBtn) {
+      arrowBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (mobSearchInput) {
+          mobSearchInput.value = text;
+          mobSearchInput.focus();
+          if (mobSearchClearBtn) mobSearchClearBtn.style.display = 'flex';
+          handleMobSearchInput(text);
+        }
+      });
+    }
+
+    // 2. Delete button click -> remove from history
+    const deleteBtn = item.querySelector('.mob-suggest-delete-btn');
+    if (deleteBtn) {
+      deleteBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        removeSearchFromHistory(text);
+        showToast('Arama geçmişten silindi');
+      });
+    }
+
+    // 3. Row click -> Execute search
     item.addEventListener('click', () => {
-      mobileSearchOverlay.classList.remove('active');
-      searchInput.value = text;
-      openFeedView();
-      fetchAndRenderFeed(text);
+      executeSearch(text);
     });
 
     mobSearchSuggestionsList.appendChild(item);
   });
+}
+
+function executeSearch(query) {
+  if (!query || !query.trim()) return;
+  const q = query.trim();
+  addSearchToHistory(q);
+  if (mobileSearchOverlay) mobileSearchOverlay.classList.remove('active');
+  if (searchInput) searchInput.value = q;
+  if (mobSearchInput) mobSearchInput.value = q;
+  openFeedView();
+  fetchAndRenderFeed(q);
+  showToast(`Aranıyor: "${q}" 🔍`);
+}
+
+async function handleMobSearchInput(val) {
+  if (!val) {
+    renderMobileSearchSuggestions();
+    return;
+  }
+
+  const history = getSearchHistory();
+  const filteredHistory = history.filter(s => s.text.toLowerCase().includes(val.toLowerCase()));
+
+  clearTimeout(suggestDebounceTimer);
+  suggestDebounceTimer = setTimeout(async () => {
+    try {
+      const res = await fetch(`/api/suggestions?q=${encodeURIComponent(val)}`);
+      const apiSuggestions = await res.json();
+      
+      const combined = [...filteredHistory];
+      if (Array.isArray(apiSuggestions)) {
+        apiSuggestions.forEach(sugText => {
+          if (!combined.some(c => c.text.toLowerCase() === sugText.toLowerCase())) {
+            combined.push({ text: sugText, thumb: '', isHistory: false });
+          }
+        });
+      }
+
+      if (combined.length === 0) {
+        combined.push({ text: val, thumb: '', isHistory: false });
+      }
+
+      renderMobileSearchSuggestions(combined);
+    } catch (_) {
+      renderMobileSearchSuggestions(filteredHistory.length > 0 ? filteredHistory : [{ text: val, thumb: '', isHistory: false }]);
+    }
+  }, 120);
 }
 
 if (mobileSearchTriggerBtn && mobileSearchOverlay) {
@@ -1850,7 +2010,7 @@ if (mobileSearchTriggerBtn && mobileSearchOverlay) {
     mobileSearchOverlay.classList.add('active');
     mobSearchInput.value = searchInput.value || '';
     if (mobSearchClearBtn) mobSearchClearBtn.style.display = mobSearchInput.value ? 'flex' : 'none';
-    renderMobileSearchSuggestions(initialMobileSuggestions);
+    renderMobileSearchSuggestions();
     setTimeout(() => mobSearchInput.focus(), 100);
   });
 }
@@ -1865,29 +2025,16 @@ if (mobSearchClearBtn && mobSearchInput) {
   mobSearchClearBtn.addEventListener('click', () => {
     mobSearchInput.value = '';
     mobSearchClearBtn.style.display = 'none';
-    renderMobileSearchSuggestions(initialMobileSuggestions);
+    renderMobileSearchSuggestions();
     mobSearchInput.focus();
   });
 }
 
 if (mobSearchInput) {
   mobSearchInput.addEventListener('input', (e) => {
-    const val = e.target.value.trim().toLowerCase();
+    const val = e.target.value.trim();
     if (mobSearchClearBtn) mobSearchClearBtn.style.display = val ? 'flex' : 'none';
-
-    if (!val) {
-      renderMobileSearchSuggestions(initialMobileSuggestions);
-      return;
-    }
-
-    // Mevcut önerileri filtrele (obje formatında)
-    const filtered = initialMobileSuggestions.filter(s => s.text.toLowerCase().includes(val));
-    // Tam eşleşme yoksa kullanıcının yazdığını başa ekle (thumb yok)
-    const hasExact = filtered.some(s => s.text.toLowerCase() === val);
-    if (!hasExact) {
-      filtered.unshift({ text: val, thumb: suggestionThumbCache.get(val) || '' });
-    }
-    renderMobileSearchSuggestions(filtered);
+    handleMobSearchInput(val);
   });
 
   mobSearchInput.addEventListener('keydown', (e) => {
@@ -1895,11 +2042,7 @@ if (mobSearchInput) {
       e.preventDefault();
       const val = mobSearchInput.value.trim();
       if (val) {
-        mobileSearchOverlay.classList.remove('active');
-        searchInput.value = val;
-        openFeedView();
-        fetchAndRenderFeed(val);
-        showToast(`Aranıyor: "${val}" 🔍`);
+        executeSearch(val);
       }
     }
   });
