@@ -455,6 +455,81 @@ function parseYouTubeDuration(duration) {
   return `${minutes}:${String(seconds).padStart(2, '0')}`;
 }
 
+// ─── Utility helpers (module-scope — used by all search engines) ──────────────
+function cleanText(str) {
+  if (!str || typeof str !== 'string') return '';
+  return str
+    .replace(/&amp;/g, '&')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&apos;/g, "'")
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>');
+}
+
+function getChannelAvatarFallback(author) {
+  const name = (author || 'YouTube').trim();
+  return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random&color=fff&size=128&bold=true&format=svg`;
+}
+
+// ─── 0. Native YouTube HTML Scraper (Direct & Zero Quota Limit) ─────────────
+async function searchDirectYouTube(query, maxResults = 24) {
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 4000);
+    const res = await fetch('https://www.youtube.com/results?search_query=' + encodeURIComponent(query), {
+      signal: controller.signal,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+        'Accept-Language': 'tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+      }
+    });
+    clearTimeout(timeout);
+    if (!res.ok) return [];
+    const html = await res.text();
+    const match = html.match(/var ytInitialData = ({.*?});<\/script>/s) || html.match(/ytInitialData\s*=\s*({.+?});/s);
+    if (!match) return [];
+    
+    const data = JSON.parse(match[1]);
+    const sectionList = data?.contents?.twoColumnSearchResultsRenderer?.primaryContents?.sectionListRenderer?.contents || [];
+    let items = [];
+    for (const section of sectionList) {
+      const contents = section?.itemSectionRenderer?.contents || [];
+      for (const item of contents) {
+        if (item.videoRenderer) {
+          const v = item.videoRenderer;
+          if (!v.videoId) continue;
+          const title = cleanText(v.title?.runs?.map(r => r.text).join('') || v.title?.simpleText || 'YouTube Video');
+          const author = cleanText(v.ownerText?.runs?.[0]?.text || v.shortBylineText?.runs?.[0]?.text || 'YouTube');
+          const rawAvatar = v.channelThumbnailSupportedRenderers?.channelThumbnailWithLinkRenderer?.thumbnail?.thumbnails?.[0]?.url || '';
+          const channelAvatar = rawAvatar ? (rawAvatar.startsWith('//') ? 'https:' + rawAvatar : rawAvatar) : getChannelAvatarFallback(author);
+          const views = v.viewCountText?.simpleText || v.viewCountText?.runs?.map(r => r.text).join('') || '';
+          const ago = v.publishedTimeText?.simpleText || '';
+          const duration = v.lengthText?.simpleText || '?:??';
+          const thumb = v.thumbnail?.thumbnails?.slice(-1)[0]?.url || `https://i.ytimg.com/vi/${v.videoId}/hqdefault.jpg`;
+          
+          items.push({
+            id: v.videoId,
+            title,
+            author,
+            channelAvatar,
+            subCount: '1,24 Mn abone',
+            views,
+            ago,
+            duration,
+            thumbnail: thumb.startsWith('//') ? 'https:' + thumb : thumb
+          });
+        }
+      }
+    }
+    return items.slice(0, maxResults);
+  } catch (err) {
+    console.warn('[Direct Scraper Warning]', err.message);
+    return [];
+  }
+}
+
 // 1. Official Google YouTube Data API v3 (Ultra-Fast ~120ms with rotating keys)
 async function searchWithYouTubeDataApi(query, maxResults = 24) {
   for (let attempt = 0; attempt < YOUTUBE_API_KEYS.length; attempt++) {
@@ -520,22 +595,6 @@ async function searchWithYouTubeDataApi(query, maxResults = 24) {
         } catch (_) {}
       }
 
-function cleanText(str) {
-  if (!str || typeof str !== 'string') return '';
-  return str
-    .replace(/&amp;/g, '&')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/&apos;/g, "'")
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>');
-}
-
-function getChannelAvatarFallback(author) {
-  const name = (author || 'YouTube').trim();
-  return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random&color=fff&size=128&bold=true&format=svg`;
-}
-
       return (data.items || []).map(item => {
         const vId = item.id?.videoId;
         const details = videoDetailsMap[vId] || {};
@@ -562,9 +621,13 @@ function getChannelAvatarFallback(author) {
   return [];
 }
 
-// 2. Secondary Scraper: yt-search (Fast fallback)
+// 2. Secondary Scraper: Direct HTML scraper fallback
 async function searchWithYts(query) {
   try {
+    const directRes = await searchDirectYouTube(query, 20);
+    if (Array.isArray(directRes) && directRes.length > 0) {
+      return directRes;
+    }
     const r = await yts(query);
     return (r.videos || [])
       .filter(v => v && v.videoId)
@@ -768,12 +831,7 @@ app.get('/api/search', async (req, res) => {
     let paginatedVideos = (videos || []).slice(startIndex, startIndex + limit);
     let result = paginatedVideos.length > 0 ? paginatedVideos : (videos || []).slice(0, limit);
 
-    // If still empty, use high-quality seed videos as absolute fallback
-    if (!result || result.length === 0) {
-      result = SEED_VIDEOS.slice(0, limit);
-    }
-
-    // Cache the result in both RAM & SQLite
+    // Cache the result in both RAM & SQLite if we found actual videos
     if (result.length > 0) {
       setCachedResults(cacheKey, result);
       db.setCachedSearch(cacheKey, q, result);
@@ -782,11 +840,13 @@ app.get('/api/search', async (req, res) => {
     res.json(result);
   } catch (err) {
     console.error('[Search Global Fallback Error]', err.message);
-    const fallbackVideos = await searchWithInvidious(q);
-    if (Array.isArray(fallbackVideos) && fallbackVideos.length > 0) {
-      return res.json(fallbackVideos);
-    }
-    res.json(SEED_VIDEOS.slice(0, limit));
+    try {
+      const fallbackVideos = await searchDirectYouTube(q, limit);
+      if (Array.isArray(fallbackVideos) && fallbackVideos.length > 0) {
+        return res.json(fallbackVideos);
+      }
+    } catch (_) {}
+    res.json([]);
   }
 });
 
