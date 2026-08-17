@@ -571,3 +571,16 @@ function escHtml(str) {
     .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
     .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
+
+// ─── PWA Service Worker Registration ───────────────────────────────────────
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js')
+      .then((reg) => {
+        console.log('[PWA Room] Service Worker registered, scope:', reg.scope);
+      })
+      .catch((err) => {
+        console.warn('[PWA Room] Service Worker registration failed:', err);
+      });
+  });
+}

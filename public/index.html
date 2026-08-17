@@ -2,9 +2,19 @@
 <html lang="tr">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>YouTube</title>
-  <link rel="icon" href="https://www.youtube.com/s/desktop/9d3de409/img/favicon.ico" type="image/x-icon">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>WatchParty</title>
+  
+  <!-- PWA & Mobile Full-Screen Configuration -->
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#0f0f0f">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="WatchParty">
+
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/icons/icon-192.png">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -18,13 +28,18 @@
         <svg viewBox="0 0 24 24" width="24" height="24"><path d="M21 6H3V5h18v1zm0 5H3v1h18v-1zm0 6H3v1h18v-1z"></path></svg>
       </button>
       
-      <div class="yt-logo-btn" id="logo-btn" title="YouTube Ana Sayfası">
-        <svg class="yt-logo-svg" viewBox="0 0 90 20" preserveAspectRatio="xMidYMid meet">
+      <div class="yt-logo-btn" id="logo-btn" title="WatchParty Ana Sayfası">
+        <svg class="yt-logo-svg" viewBox="0 0 125 24" preserveAspectRatio="xMidYMid meet">
           <g>
-            <path d="M27.9727 3.12324C27.6435 1.89323 26.6768 0.926623 25.4468 0.597366C23.2197 2.24288e-07 14.285 0 14.285 0C14.285 0 5.35042 2.24288e-07 3.12323 0.597366C1.89323 0.926623 0.926623 1.89323 0.597366 3.12324C2.24288e-07 5.35042 0 10 0 10C0 10 2.24288e-07 14.6496 0.597366 16.8768C0.926623 18.1068 1.89323 19.0734 3.12323 19.4026C5.35042 20 14.285 20 14.285 20C14.285 20 23.2197 20 25.4468 19.4026C26.6768 19.0734 27.6435 18.1068 27.9727 16.8768C28.5701 14.6496 28.5701 10 28.5701 10C28.5701 10 28.5677 5.35042 27.9727 3.12324Z" fill="#FF0000"></path>
-            <path d="M11.4253 14.2854L18.8477 10.0004L11.4253 5.71533V14.2854Z" fill="white"></path>
+            <!-- YouTube Red Badge with Sync Party Curves -->
+            <path d="M27.5 2.8C27.1 1.4 26 0.4 24.6 0C22.2 0 14 0 14 0C14 0 5.8 0 3.4 0C2 0.4 0.9 1.4 0.5 2.8C0 5.8 0 12 0 12C0 12 0 18.2 0.5 21.2C0.9 22.6 2 23.6 3.4 24C5.8 24 14 24 14 24C14 24 22.2 24 24.6 24C26 23.6 27.1 22.6 27.5 21.2C28 18.2 28 12 28 12C28 12 28 5.8 27.5 2.8Z" fill="#FF0000"></path>
+            <!-- White Play Arrow -->
+            <path d="M11 16.5L18.5 12L11 7.5V16.5Z" fill="white"></path>
+            <!-- Synced Party Wave -->
+            <path d="M20 8.5C20.8 9.5 21.3 10.7 21.3 12C21.3 13.3 20.8 14.5 20 15.5" stroke="white" stroke-width="1.6" stroke-linecap="round" fill="none" opacity="0.95"></path>
           </g>
-          <text x="32" y="16" fill="#FFFFFF" font-family="'Roboto', Arial, sans-serif" font-weight="700" font-size="16" letter-spacing="-0.5">YouTube</text>
+          <!-- Custom YouTube Typography: WatchParty -->
+          <text x="34" y="17.5" fill="#FFFFFF" font-family="'Roboto', 'YouTube Sans', Arial, sans-serif" font-weight="700" font-size="16" letter-spacing="-0.5">Watch<tspan fill="#FF2b2b">Party</tspan></text>
         </svg>
         <span class="yt-country-code">TR</span>
       </div>

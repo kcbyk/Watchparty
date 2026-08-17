@@ -126,16 +126,18 @@ svg {
   align-items: center;
   gap: 4px;
   cursor: pointer;
+  user-select: none;
 }
 .yt-logo-svg {
-  width: 90px;
-  height: 20px;
+  width: 122px;
+  height: 22px;
 }
 .yt-country-code {
   font-size: 10px;
   color: var(--yt-text-secondary);
   margin-top: -10px;
   margin-left: 2px;
+  font-weight: 500;
 }
 
 /* Header Search */
