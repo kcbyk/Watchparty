@@ -1542,13 +1542,8 @@ async function openDownloadModal(video) {
 function triggerProxyDownload(url, filename) {
   showToast('İndirme başladı ⬇️');
   downloadModal.classList.remove('active');
-  const proxyUrl = `/api/proxy-download?url=${encodeURIComponent(url)}&filename=${encodeURIComponent(filename)}`;
-  const a = document.createElement('a');
-  a.href = proxyUrl;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
+  // window.location.href ile tarayıcı dosyayı indirir
+  window.location.href = `/api/proxy-download?url=${encodeURIComponent(url)}&filename=${encodeURIComponent(filename)}`;
 }
 
 function triggerDownload(url, filename, isDirectLink) {
