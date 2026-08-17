@@ -2917,32 +2917,32 @@ function renderReelsFeed(videos) {
     const item = document.createElement('div');
     item.className = 'reel-item';
     item.setAttribute('data-idx', idx);
+    item.setAttribute('data-id', v.id);
 
     const isLiked = reelsLikedSet.has(v.id);
 
     item.innerHTML = `
-      <img class="reel-bg" src="${escapeHtml(v.cover)}" alt="${escapeHtml(v.desc)}" loading="${idx < 3 ? 'eager' : 'lazy'}">
-      
+      <!-- TikTok Embed Player (lazy — loads on scroll) -->
+      <div class="reel-embed-wrap" data-src="${escapeHtml(v.embedUrl || `https://www.tiktok.com/embed/v2/${v.id}`)}">
+        <!-- Thumbnail shown until iframe loads -->
+        <img class="reel-bg reel-thumb-placeholder" src="${escapeHtml(v.cover || `https://picsum.photos/seed/${v.id}/400/700`)}" alt="${escapeHtml(v.author)}">
+        <div class="reel-embed-loader">
+          <div class="reels-spinner"></div>
+        </div>
+      </div>
+
       <!-- TikTok badge -->
       <div class="reel-tiktok-badge">
-        <svg viewBox="0 0 24 24" fill="#fff"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34l-.07-8.2a8.17 8.17 0 004.79 1.54V5.2a4.85 4.85 0 01-1-.51z"/></svg>
+        <svg viewBox="0 0 24 24" fill="#fff" width="18" height="18"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34l-.07-8.2a8.17 8.17 0 004.79 1.54V5.2a4.85 4.85 0 01-1-.51z"/></svg>
         <span>TikTok</span>
       </div>
 
-      <!-- Tap zone -->
-      <div class="reel-tap-zone"></div>
-
-      <!-- Play icon -->
-      <div class="reel-play-icon">
-        <svg viewBox="0 0 24 24" width="36" height="36"><path d="M8 5v14l11-7z"></path></svg>
-      </div>
-
-      <!-- Right actions -->
+      <!-- Right actions (overlay over iframe — pointer-events none on bg) -->
       <div class="reel-actions">
         <div class="reel-avatar-wrap">
-          <img class="reel-avatar" src="${escapeHtml(v.avatar)}" alt="${escapeHtml(v.author)}" onerror="this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(v.author)}&background=fe2c55&color=fff&size=128&bold=true'">
+          <img class="reel-avatar" src="${escapeHtml(v.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(v.author)}&background=fe2c55&color=fff&size=128&bold=true`)}" alt="${escapeHtml(v.author)}" onerror="this.src='https://ui-avatars.com/api/?name=TT&background=fe2c55&color=fff&size=128&bold=true'">
           <div class="reel-follow-dot">
-            <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"></path></svg>
+            <svg viewBox="0 0 24 24" width="10" height="10" fill="#fff"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"></path></svg>
           </div>
         </div>
 
@@ -2960,7 +2960,7 @@ function renderReelsFeed(videos) {
           <span class="reel-action-count">${escapeHtml(v.comments)}</span>
         </button>
 
-        <button class="reel-action-btn reel-share-btn">
+        <button class="reel-action-btn reel-share-btn" data-author="${escapeHtml(v.author)}" data-desc="${escapeHtml(v.desc || '')}">
           <div class="reel-action-icon">
             <svg viewBox="0 0 24 24" width="22" height="22"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92 1.61 0 2.92-1.31 2.92-2.92s-1.31-2.92-2.92-2.92z"></path></svg>
           </div>
@@ -2968,12 +2968,12 @@ function renderReelsFeed(videos) {
         </button>
       </div>
 
-      <!-- Bottom info -->
+      <!-- Bottom info (shown before/under the iframe) -->
       <div class="reel-info">
         <div class="reel-author">${escapeHtml(v.author)}</div>
-        <div class="reel-desc">${escapeHtml(v.desc)}</div>
+        <div class="reel-desc">${escapeHtml(v.desc || '')}</div>
         <div class="reel-music-row">
-          <svg class="reel-music-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"></path></svg>
+          <svg class="reel-music-icon" viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"></path></svg>
           <span class="reel-music-text">Orijinal ses - ${escapeHtml(v.author)}</span>
         </div>
       </div>
@@ -2996,7 +2996,6 @@ function renderReelsFeed(videos) {
         } else {
           reelsLikedSet.add(id);
           likeBtn.classList.add('liked');
-          // Animate heart
           const icon = likeBtn.querySelector('.reel-action-icon');
           if (icon) {
             icon.style.transform = 'scale(1.35)';
@@ -3008,40 +3007,24 @@ function renderReelsFeed(videos) {
     }
 
     // Comment button
-    const commentBtn = item.querySelector('.reel-comment-btn');
-    if (commentBtn) {
-      commentBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        showToast('Yorum özelliği yakında 💬');
-      });
-    }
+    item.querySelector('.reel-comment-btn')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      showToast('Yorumlar yakında 💬');
+    });
 
     // Share button
     const shareBtn = item.querySelector('.reel-share-btn');
     if (shareBtn) {
       shareBtn.addEventListener('click', (e) => {
         e.stopPropagation();
+        const author = shareBtn.getAttribute('data-author') || '';
+        const tiktokUrl = `https://www.tiktok.com/${author}`;
         if (navigator.share) {
-          navigator.share({ title: v.author, text: v.desc, url: 'https://www.tiktok.com/@' + v.author.replace('@', '') }).catch(() => {});
+          navigator.share({ title: author, url: tiktokUrl }).catch(() => {});
         } else {
-          navigator.clipboard?.writeText('https://www.tiktok.com/@' + v.author.replace('@', ''));
+          navigator.clipboard?.writeText(tiktokUrl);
           showToast('Link kopyalandı 📋');
         }
-      });
-    }
-
-    // Tap to pause/play (visual only — images don't play)
-    const tapZone = item.querySelector('.reel-tap-zone');
-    const playIcon = item.querySelector('.reel-play-icon');
-    let isPaused = false;
-    if (tapZone) {
-      tapZone.addEventListener('click', () => {
-        isPaused = !isPaused;
-        if (playIcon) {
-          playIcon.classList.toggle('show', isPaused);
-          if (!isPaused) setTimeout(() => playIcon.classList.remove('show'), 600);
-        }
-        try { navigator.vibrate?.(10); } catch (_) {}
       });
     }
 
@@ -3058,28 +3041,49 @@ function renderReelsFeed(videos) {
   `;
   reelsFeed.appendChild(endCard);
 
-  // Intersection Observer — progress bar fake animation per visible reel
+  // Intersection Observer — iframe'i sadece görünürken yükle (lazy embed)
   const observer = new IntersectionObserver((entries) => {
     entries.forEach(entry => {
+      const wrap = entry.target.querySelector('.reel-embed-wrap');
+      const bar = entry.target.querySelector('.reel-progress-bar');
+
       if (entry.isIntersecting) {
-        const bar = entry.target.querySelector('.reel-progress-bar');
+        // iframe henüz yüklenmemişse yükle
+        if (wrap && !wrap.querySelector('iframe')) {
+          const src = wrap.getAttribute('data-src');
+          if (src) {
+            const iframe = document.createElement('iframe');
+            iframe.src = src;
+            iframe.allow = 'autoplay; fullscreen; encrypted-media; picture-in-picture';
+            iframe.allowFullscreen = true;
+            iframe.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;border:none;background:#000;';
+            iframe.setAttribute('scrolling', 'no');
+            iframe.onload = () => {
+              const loader = wrap.querySelector('.reel-embed-loader');
+              const thumb = wrap.querySelector('.reel-thumb-placeholder');
+              if (loader) loader.style.display = 'none';
+              if (thumb) thumb.style.opacity = '0';
+            };
+            wrap.appendChild(iframe);
+          }
+        }
+        // Progress bar
         if (bar) {
           bar.style.transition = 'none';
           bar.style.width = '0%';
           setTimeout(() => {
-            bar.style.transition = 'width 8s linear';
+            bar.style.transition = 'width 60s linear';
             bar.style.width = '100%';
-          }, 50);
+          }, 100);
         }
       } else {
-        const bar = entry.target.querySelector('.reel-progress-bar');
         if (bar) {
           bar.style.transition = 'none';
           bar.style.width = '0%';
         }
       }
     });
-  }, { threshold: 0.6 });
+  }, { threshold: 0.5, rootMargin: '0px' });
 
   reelsFeed.querySelectorAll('.reel-item').forEach(el => observer.observe(el));
 }

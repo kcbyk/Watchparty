@@ -2801,44 +2801,52 @@ svg {
   height: 100%;
   object-fit: cover;
   filter: brightness(0.75);
-  transition: filter 0.3s ease;
+  transition: filter 0.3s ease, opacity 0.4s ease;
 }
 .reel-item.active .reel-bg {
   filter: brightness(0.6);
 }
 
-/* Play/Pause tap overlay */
-.reel-tap-zone {
+/* TikTok embed wrapper — iframe container */
+.reel-embed-wrap {
   position: absolute;
   inset: 0;
-  z-index: 2;
-  cursor: pointer;
-}
-
-/* Play icon shown on pause */
-.reel-play-icon {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%) scale(0);
-  width: 72px;
-  height: 72px;
-  background: rgba(0,0,0,0.55);
-  border-radius: 50%;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #000;
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 4;
+}
+.reel-embed-wrap iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+  background: #000;
+}
+
+/* Thumbnail placeholder shown while iframe loads */
+.reel-thumb-placeholder {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 1;
+  transition: opacity 0.5s ease;
+}
+
+/* Loading spinner inside embed */
+.reel-embed-loader {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
   pointer-events: none;
-  transition: transform 0.15s ease, opacity 0.15s ease;
-  opacity: 0;
-}
-.reel-play-icon.show {
-  transform: translate(-50%, -50%) scale(1);
-  opacity: 1;
-}
-.reel-play-icon svg {
-  fill: #fff;
+  background: rgba(0,0,0,0.3);
 }
 
 /* ─── Right Action Buttons (TikTok style) ────────────────────────────────── */
