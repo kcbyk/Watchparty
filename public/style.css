@@ -1563,9 +1563,93 @@ svg {
   border-radius: 18px;
   margin-left: 12px;
   transition: background 0.15s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
 }
 .watch-subscribe-btn:hover {
   background: #d9d9d9;
+}
+
+/* Download Modal */
+.download-option-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  background: #1a1a1a;
+  border-radius: 10px;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+.download-option-btn:hover {
+  background: #272727;
+  border-color: rgba(255,255,255,0.15);
+}
+.download-size-badge {
+  font-size: 12px;
+  color: #aaa;
+  background: #2a2a2a;
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+
+/* MP3 İndirme Kartı */
+.download-mp3-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 18px;
+  background: linear-gradient(135deg, #1a3a5c 0%, #0d2137 100%);
+  border: 1px solid rgba(62, 166, 255, 0.3);
+  border-radius: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-top: 8px;
+}
+.download-mp3-card:hover {
+  background: linear-gradient(135deg, #1f4570 0%, #112843 100%);
+  border-color: rgba(62, 166, 255, 0.6);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 20px rgba(62, 166, 255, 0.2);
+}
+.download-mp3-card:active {
+  transform: translateY(0);
+}
+.download-mp3-card-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.download-mp3-icon {
+  width: 46px;
+  height: 46px;
+  background: rgba(62, 166, 255, 0.2);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.download-mp3-arrow {
+  width: 36px;
+  height: 36px;
+  background: #3ea6ff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 
 .watch-actions-right {

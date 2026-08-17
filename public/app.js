@@ -1517,9 +1517,9 @@ async function openDownloadModal(video) {
       return;
     }
 
-    // MP3 butonu — API + proxy ile indir
+    // MP3 kartı — tıklanınca indir
     if (downloadMp3Btn) {
-      if (downloadMp3Size) downloadMp3Size.textContent = formatFileSize(data.mp3?.size);
+      if (downloadMp3Size) downloadMp3Size.textContent = data.mp3?.size ? formatFileSize(data.mp3.size) : 'Ses kalitesi: yüksek';
       downloadMp3Btn.onclick = () => {
         if (data.mp3?.url) {
           triggerProxyDownload(data.mp3.url, `${(data.title||video.title||'audio').replace(/[^\w\s-]/g,'').trim()}.mp3`);
@@ -1527,7 +1527,6 @@ async function openDownloadModal(video) {
           showToast('MP3 linki alınamadı');
         }
       };
-      downloadMp3Btn.style.display = 'flex';
     }
 
     downloadLoading.style.display = 'none';
