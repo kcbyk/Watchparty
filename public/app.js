@@ -388,6 +388,9 @@ function openWatchView(video) {
   watchView.classList.add('active');
   window.scrollTo({ top: 0, behavior: 'smooth' });
 
+  // Kullanıcı tercihlerini Yapay Zeka modeline kaydet
+  recordAiWatchInteraction(video);
+
   watchTitle.textContent = decodeHtmlEntities(video.title) || 'Video';
   watchChannelName.textContent = decodeHtmlEntities(video.author) || 'YouTube';
 
@@ -396,13 +399,9 @@ function openWatchView(video) {
     subCountEl.textContent = video.subCount || '1,24 Mn abone';
   }
 
-  if (video.channelAvatar) {
-    watchChannelAvatar.innerHTML = `<img src="${escapeHtml(video.channelAvatar)}" alt="${escapeHtml(video.author)}" style="width:100%; height:100%; border-radius:50%; object-fit:cover;">`;
-    watchChannelAvatar.style.backgroundColor = 'transparent';
-  } else {
-    watchChannelAvatar.textContent = (video.author || 'Y')[0].toUpperCase();
-    watchChannelAvatar.style.backgroundColor = getAvatarColor(video.author);
-  }
+  const avatarUrl = video.channelAvatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(video.author || 'Y')}&background=random&color=fff&size=128&bold=true&format=svg`;
+  watchChannelAvatar.innerHTML = `<img src="${escapeHtml(avatarUrl)}" alt="${escapeHtml(video.author)}" style="width:100%; height:100%; border-radius:50%; object-fit:cover;" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(video.author || 'Y')}&background=random&color=fff&size=128&bold=true&format=svg';">`;
+  watchChannelAvatar.style.backgroundColor = 'transparent';
   
   const views = video.views || '245 B görüntüleme';
   const ago = video.ago || '3 gün önce';
@@ -660,34 +659,79 @@ const CLIENT_FALLBACK_VIDEOS = [
   }
 ];
 
-// ─── Search & Feed Rendering ───────────────────────────────────────────────
+// ─── AI Personalized Recommendation Engine ────────────────────────────────
+let aiFeedSeed = 0;
+
+function recordAiWatchInteraction(video) {
+  if (!video) return;
+  try {
+    let history = JSON.parse(localStorage.getItem('yt_wp_ai_interests') || '[]');
+    if (!Array.isArray(history)) history = [];
+    
+    // Video başlığındaki gereksiz kelimeleri filtrele
+    const cleanTitle = (video.title || '')
+      .replace(/[\(\)\[\]\{\}\-_|:;.,!?\/\\~"']/g, ' ')
+      .replace(/\b(official|video|music|klip|remastered|audio|lyric|lyrics|hd|4k|feat|ft|full|clip)\b/gi, '')
+      .trim();
+    
+    const words = cleanTitle.split(/\s+/).filter(w => w.length > 2).slice(0, 3);
+    if (video.author && video.author.length > 1) {
+      words.unshift(video.author.trim());
+    }
+
+    words.forEach(k => {
+      if (k && !history.includes(k)) {
+        history.unshift(k);
+      }
+    });
+
+    history = history.slice(0, 20);
+    localStorage.setItem('yt_wp_ai_interests', JSON.stringify(history));
+  } catch (_) {}
+}
+
+// ─── Search & Feed Rendering with AI Engine ────────────────────────────────
 async function fetchAndRenderFeed(query, showSpinner = true) {
-  currentFeedQuery = query || 'yapay zeka';
+  currentFeedQuery = query || 'Tümü';
   currentFeedPage = 1;
   hasMoreFeed = true;
   if (videoGridScroll) videoGridScroll.scrollTop = 0;
 
   if (showSpinner && videoGrid) {
     videoGrid.innerHTML = `
-      <div style="grid-column: 1/-1; padding: 40px 0; text-align: center; color: var(--yt-text-secondary); font-size: 15px;">
-        Yükleniyor...
+      <div style="grid-column: 1/-1; padding: 48px 0; text-align: center; color: var(--yt-text-secondary); font-size: 14px;">
+        <div style="display:inline-block; width:30px; height:30px; border:3px solid rgba(255,255,255,0.15); border-top-color:#ff0000; border-radius:50%; animation:ptr-spin 0.75s linear infinite; margin-bottom:12px;"></div>
+        <div style="font-weight:500; color:#fff;">Yapay zekâ önerileri hazırlanıyor...</div>
       </div>
     `;
   }
 
   try {
-    const res = await fetch(`/api/search?q=${encodeURIComponent(currentFeedQuery)}&page=1&limit=16`);
+    let url = '';
+    const isMainFeed = !query || query === 'Tümü' || query === 'trend popüler türkiye';
+    
+    if (isMainFeed) {
+      let userInterests = [];
+      try {
+        userInterests = JSON.parse(localStorage.getItem('yt_wp_ai_interests') || '[]');
+      } catch (_) {}
+      aiFeedSeed++;
+      url = `/api/ai-feed?context=${encodeURIComponent(userInterests.join(','))}&seed=${aiFeedSeed}`;
+    } else {
+      url = `/api/search?q=${encodeURIComponent(query)}&page=1&limit=20`;
+    }
+
+    const res = await fetch(url);
     const videos = await res.json();
 
     if (!Array.isArray(videos) || videos.length === 0) {
-      if (!showSpinner) return; // background fetch — keep existing cards
+      if (!showSpinner) return;
       renderVideoGrid(CLIENT_FALLBACK_VIDEOS);
       return;
     }
 
-    // Arama geçmişine bu sorgunun gerçek video kapak görselini kaydet
-    if (videos[0]?.thumbnail) {
-      updateSearchHistoryThumbnail(currentFeedQuery, videos[0].thumbnail);
+    if (videos[0]?.thumbnail && query && !isMainFeed) {
+      updateSearchHistoryThumbnail(query, videos[0].thumbnail);
     }
 
     renderVideoGrid(videos);
@@ -719,11 +763,9 @@ function createVideoCardElement(video, index) {
   
   const views = video.views || (Math.floor(Math.random() * 850 + 20) + ' B görüntüleme');
   const timeAgo = video.ago || ['3 gün önce', '1 hafta önce', '2 hafta önce', '1 ay önce', '3 ay önce', '1 yıl önce'][(index || 0) % 6];
-  const initial = (video.author || 'Y')[0].toUpperCase();
-  const avatarBg = getAvatarColor(video.author);
-  const avatarHtml = video.channelAvatar
-    ? `<img src="${escapeHtml(video.channelAvatar)}" alt="${escapeHtml(video.author)}" style="width:100%; height:100%; border-radius:50%; object-fit:cover;">`
-    : initial;
+  
+  // Kesin olarak her videoda profil fotoğrafı göster
+  const avatarUrl = video.channelAvatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(video.author || 'Y')}&background=random&color=fff&size=128&bold=true&format=svg`;
 
   card.innerHTML = `
     <div class="thumbnail-wrapper" ${index === 0 ? 'id="first-video-thumb"' : ''}>
@@ -731,8 +773,8 @@ function createVideoCardElement(video, index) {
       <span class="video-duration">${escapeHtml(video.duration)}</span>
     </div>
     <div class="card-details">
-      <div class="channel-avatar" style="${video.channelAvatar ? 'background:transparent;' : `background-color: ${avatarBg};`}">
-        ${avatarHtml}
+      <div class="channel-avatar">
+        <img class="channel-avatar-img" src="${escapeHtml(avatarUrl)}" alt="${escapeHtml(video.author)}" style="width:100%; height:100%; border-radius:50%; object-fit:cover;" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(video.author || 'Y')}&background=random&color=fff&size=128&bold=true&format=svg';" loading="lazy">
       </div>
       <div class="meta-container">
         <h3 class="video-title" ${index === 0 ? 'id="first-video-title"' : ''} title="${escapeHtml(video.title)}">${escapeHtml(video.title)}</h3>
@@ -1311,25 +1353,37 @@ if (sidebarToggleBtn && sidebar) {
   });
 }
 
-if (logoBtn) {
-  logoBtn.addEventListener('click', () => {
+// ─── Double-Tap / Click to Refresh on Logo and Home Nav Button ─────────────
+let lastHomeTapTime = 0;
+
+function handleHomeClickOrDoubleTap() {
+  const now = Date.now();
+  if (now - lastHomeTapTime < 450) {
+    // Çift basıldı: Yapay zekâ akışını ve sayfayı sıfırdan yenile
+    lastHomeTapTime = 0;
     openFeedView();
-    searchInput.value = '';
-    clearSearchBtn.classList.remove('visible');
-    fetchAndRenderFeed('trend popüler türkiye');
-    document.querySelectorAll('.chip-item').forEach((c, idx) => c.classList.toggle('active', idx === 0));
-  });
+    if (searchInput) searchInput.value = '';
+    if (clearSearchBtn) clearSearchBtn.classList.remove('visible');
+    triggerPullRefresh();
+    showToast('Öneriler yenileniyor... 🤖✨');
+    return;
+  }
+  
+  lastHomeTapTime = now;
+  openFeedView();
+  if (searchInput) searchInput.value = '';
+  if (clearSearchBtn) clearSearchBtn.classList.remove('visible');
+  fetchAndRenderFeed('Tümü');
+  document.querySelectorAll('.chip-item').forEach((c, idx) => c.classList.toggle('active', idx === 0));
+}
+
+if (logoBtn) {
+  logoBtn.addEventListener('click', handleHomeClickOrDoubleTap);
 }
 
 const homeNavBtn = document.querySelector('.sidebar-nav-item[data-category="Tümü"]');
 if (homeNavBtn) {
-  homeNavBtn.addEventListener('click', () => {
-    openFeedView();
-    searchInput.value = '';
-    clearSearchBtn.classList.remove('visible');
-    fetchAndRenderFeed('trend popüler türkiye');
-    document.querySelectorAll('.chip-item').forEach((c, idx) => c.classList.toggle('active', idx === 0));
-  });
+  homeNavBtn.addEventListener('click', handleHomeClickOrDoubleTap);
 }
 
 if (createActionBtn) {

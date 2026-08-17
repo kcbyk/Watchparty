@@ -531,18 +531,24 @@ function cleanText(str) {
     .replace(/&gt;/g, '>');
 }
 
+function getChannelAvatarFallback(author) {
+  const name = (author || 'YouTube').trim();
+  return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random&color=fff&size=128&bold=true&format=svg`;
+}
+
       return (data.items || []).map(item => {
         const vId = item.id?.videoId;
         const details = videoDetailsMap[vId] || {};
         const chDetails = (details.channelId && channelDetailsMap[details.channelId]) ? channelDetailsMap[details.channelId] : {};
+        const authorName = cleanText(item.snippet?.channelTitle) || 'YouTube Kanalı';
         return {
           id: vId,
           title: cleanText(item.snippet?.title) || 'YouTube Video',
           thumbnail: item.snippet?.thumbnails?.high?.url || item.snippet?.thumbnails?.medium?.url || `https://i.ytimg.com/vi/${vId}/hqdefault.jpg`,
           duration: details.duration || '?:??',
-          author: cleanText(item.snippet?.channelTitle) || 'YouTube Kanalı',
+          author: authorName,
           channelId: details.channelId || item.snippet?.channelId || '',
-          channelAvatar: chDetails.avatar || '',
+          channelAvatar: chDetails.avatar || getChannelAvatarFallback(authorName),
           subCount: chDetails.subCount || '1,24 Mn abone',
           ago: item.snippet?.publishedAt ? new Date(item.snippet.publishedAt).toLocaleDateString('tr-TR') : '',
           views: details.views || ''
@@ -562,17 +568,21 @@ async function searchWithYts(query) {
     const r = await yts(query);
     return (r.videos || [])
       .filter(v => v && v.videoId)
-      .map(v => ({
-        id: v.videoId,
-        title: typeof v.title === 'string' ? v.title : (v.title?.text || String(v.title || 'YouTube Video')),
-        thumbnail: v.thumbnail || v.image || `https://i.ytimg.com/vi/${v.videoId}/hqdefault.jpg`,
-        duration: v.timestamp || '?:??',
-        author: typeof v.author === 'string' ? v.author : (v.author?.name || 'YouTube'),
-        channelAvatar: v.author?.avatar || '',
-        subCount: 'Abone',
-        ago: v.ago || '',
-        views: v.views ? (typeof v.views === 'number' ? (v.views.toLocaleString('tr-TR') + ' görüntüleme') : String(v.views)) : ''
-      }));
+      .map(v => {
+        const authorName = typeof v.author === 'string' ? v.author : (v.author?.name || 'YouTube');
+        const chAvatar = (typeof v.author === 'object' && v.author?.avatar) ? v.author.avatar : getChannelAvatarFallback(authorName);
+        return {
+          id: v.videoId,
+          title: typeof v.title === 'string' ? v.title : (v.title?.text || String(v.title || 'YouTube Video')),
+          thumbnail: v.thumbnail || v.image || `https://i.ytimg.com/vi/${v.videoId}/hqdefault.jpg`,
+          duration: v.timestamp || '?:??',
+          author: authorName,
+          channelAvatar: chAvatar,
+          subCount: '1,24 Mn abone',
+          ago: v.ago || '',
+          views: v.views ? (typeof v.views === 'number' ? (v.views.toLocaleString('tr-TR') + ' görüntüleme') : String(v.views)) : ''
+        };
+      });
   } catch (e) {
     return [];
   }
@@ -595,20 +605,95 @@ async function searchWithInvidious(query) {
       if (!res.ok) continue;
       const data = await res.json();
       if (Array.isArray(data) && data.length > 0) {
-        return data.map(v => ({
-          id: v.videoId,
-          title: v.title || 'YouTube Video',
-          thumbnail: v.videoThumbnails?.[0]?.url || `https://i.ytimg.com/vi/${v.videoId}/hqdefault.jpg`,
-          duration: v.lengthSeconds ? `${Math.floor(v.lengthSeconds/60)}:${String(v.lengthSeconds%60).padStart(2,'0')}` : '?:??',
-          author: v.author || 'YouTube',
-          ago: v.publishedText || '',
-          views: v.viewCount ? (Number(v.viewCount).toLocaleString('tr-TR') + ' görüntüleme') : ''
-        })).filter(v => v.id);
+        return data.map(v => {
+          const authorName = v.author || 'YouTube';
+          return {
+            id: v.videoId,
+            title: v.title || 'YouTube Video',
+            thumbnail: v.videoThumbnails?.[0]?.url || `https://i.ytimg.com/vi/${v.videoId}/hqdefault.jpg`,
+            duration: v.lengthSeconds ? `${Math.floor(v.lengthSeconds/60)}:${String(v.lengthSeconds%60).padStart(2,'0')}` : '?:??',
+            author: authorName,
+            channelAvatar: getChannelAvatarFallback(authorName),
+            ago: v.publishedText || '',
+            views: v.viewCount ? (Number(v.viewCount).toLocaleString('tr-TR') + ' görüntüleme') : ''
+          };
+        }).filter(v => v.id);
       }
     } catch (_) {}
   }
   return [];
 }
+
+// ─── AI Personalized Recommendation Feed Route ────────────────────────────
+app.get('/api/ai-feed', async (req, res) => {
+  try {
+    const rawContext = req.query.context || '';
+    const seed = req.query.seed || '0';
+    let userKeywords = [];
+    if (rawContext) {
+      userKeywords = rawContext.split(',').map(s => s.trim()).filter(Boolean);
+    }
+
+    const discoveryPool = [
+      'trend popüler türkiye',
+      'yeni çıkan hit şarkılar klip',
+      'viral şarkılar trendler',
+      'türkçe rap hiphop 2026',
+      'türkçe pop en çok dinlenen',
+      'en iyi akustik canlı performans',
+      'dünya trend müzikler',
+      'global hit music'
+    ];
+
+    let targetQueries = [];
+    if (userKeywords.length > 0) {
+      // Kişiselleştirilmiş kullanıcı ilgi alanları
+      const shuffled = userKeywords.sort(() => 0.5 - Math.random());
+      const selected = shuffled.slice(0, 2);
+      targetQueries.push(`${selected.join(' ')} en iyi popüler`);
+      targetQueries.push(`${selected[0]} benzeri şarkılar`);
+    }
+    
+    // Keşif havuzundan ekle
+    const discQ = discoveryPool[Math.abs(parseInt(seed, 10) || 0) % discoveryPool.length];
+    targetQueries.push(discQ);
+
+    let combinedVideos = [];
+    for (const q of targetQueries) {
+      let results = await searchWithYouTubeDataApi(q, 15);
+      if (!results || results.length === 0) {
+        results = await searchWithYts(q);
+      }
+      if (Array.isArray(results)) {
+        combinedVideos.push(...results);
+      }
+    }
+
+    // Deduplicate & ensure profile pictures
+    const seen = new Set();
+    const cleanList = [];
+    for (const v of combinedVideos) {
+      if (!v || !v.id || seen.has(v.id)) continue;
+      seen.add(v.id);
+      if (!v.channelAvatar) {
+        v.channelAvatar = getChannelAvatarFallback(v.author);
+      }
+      cleanList.push(v);
+    }
+
+    if (cleanList.length === 0) {
+      return res.json(SEED_VIDEOS.map(v => ({
+        ...v,
+        channelAvatar: v.channelAvatar || getChannelAvatarFallback(v.author)
+      })));
+    }
+
+    res.json(cleanList.slice(0, 24));
+  } catch (err) {
+    console.error('[AI Feed Error]', err.message);
+    res.json(SEED_VIDEOS);
+  }
+});
 
 // ─── Search Route with Instant RAM Cache & Parallel Multi-Engine ────────────
 app.get('/api/search', async (req, res) => {
