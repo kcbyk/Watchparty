@@ -1783,33 +1783,16 @@ if (btnLeaveRoom) {
 }
 
 // ─── Search History & Mobile Full-Screen Search System ────────────────────
-const SEARCH_HISTORY_STORAGE_KEY = 'yt_search_history';
-
-// Default initial suggestions for brand new users (with working high-quality thumbnails)
-const DEFAULT_INITIAL_SUGGESTIONS = [
-  { text: 'galatasaray çorum',            thumb: 'https://i.ytimg.com/vi/09R8_2nJtjg/default.jpg', isHistory: true },
-  { text: 'ataberk doğan',                thumb: 'https://i.ytimg.com/vi/dQw4w9WgXcQ/default.jpg', isHistory: true },
-  { text: 'izliyor',                      thumb: 'https://i.ytimg.com/vi/kJQP7kiw5Fk/default.jpg', isHistory: true },
-  { text: 'wegh',                         thumb: 'https://i.ytimg.com/vi/fJ9rUzIMcZQ/default.jpg', isHistory: true },
-  { text: 'yapay zeka',                   thumb: 'https://i.ytimg.com/vi/JGwWNGJdvx8/default.jpg', isHistory: true },
-  { text: 'jahrein cenk bey',             thumb: 'https://i.ytimg.com/vi/OPf0YbXqDm0/default.jpg', isHistory: true },
-  { text: 'guldur guldur show',           thumb: 'https://i.ytimg.com/vi/RgKAFK5djSk/default.jpg', isHistory: true },
-  { text: 'fenerbahçe maç özeti',         thumb: 'https://i.ytimg.com/vi/hT_nvWreIhg/default.jpg', isHistory: true },
-  { text: 'kısmetse olur 4 sezon',        thumb: 'https://i.ytimg.com/vi/CevxZvSJLk8/default.jpg', isHistory: true },
-  { text: 'trabzonspor',                  thumb: 'https://i.ytimg.com/vi/uelHwf8o7_U/default.jpg', isHistory: true },
-  { text: 'yıldız tilbe',                 thumb: 'https://i.ytimg.com/vi/YQHsXMglC9A/default.jpg', isHistory: true },
-  { text: 'müslüm gürses',                thumb: 'https://i.ytimg.com/vi/9bZkp7q19f0/default.jpg', isHistory: true }
-];
+const SEARCH_HISTORY_STORAGE_KEY = 'yt_wp_user_search_history';
 
 function getSearchHistory() {
   try {
     const raw = localStorage.getItem(SEARCH_HISTORY_STORAGE_KEY);
-    if (!raw) return DEFAULT_INITIAL_SUGGESTIONS;
+    if (!raw) return [];
     const parsed = JSON.parse(raw);
-    if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-    return DEFAULT_INITIAL_SUGGESTIONS;
+    return Array.isArray(parsed) ? parsed : [];
   } catch (e) {
-    return DEFAULT_INITIAL_SUGGESTIONS;
+    return [];
   }
 }
 
@@ -1828,7 +1811,7 @@ function addSearchToHistory(text, thumb = '') {
   const existing = history.find(item => item.text.toLowerCase() === clean.toLowerCase());
   const finalThumb = thumb || existing?.thumb || '';
 
-  // Başa taşı veya ekle
+  // Mevcut olanı kaldırıp en başa taşı
   history = history.filter(item => item.text.toLowerCase() !== clean.toLowerCase());
   history.unshift({ text: clean, thumb: finalThumb, isHistory: true, time: Date.now() });
 
@@ -1837,7 +1820,7 @@ function addSearchToHistory(text, thumb = '') {
 
 function removeSearchFromHistory(text) {
   let history = getSearchHistory();
-  history = history.filter(item => item.text.toLowerCase() !== text.toLowerCase());
+  history = history.filter(item => item.text.toLowerCase() !== text.toLowerCase().trim());
   saveSearchHistory(history);
   renderMobileSearchSuggestions();
 }
@@ -1884,8 +1867,12 @@ function renderMobileSearchSuggestions(customItems = null) {
 
   if (items.length === 0) {
     mobSearchSuggestionsList.innerHTML = `
-      <div style="padding: 32px 16px; text-align: center; color: var(--yt-text-secondary); font-size: 14px;">
-        Arama geçmişiniz boş
+      <div style="padding: 48px 24px; text-align: center; color: var(--yt-text-secondary); font-size: 14px;">
+        <svg viewBox="0 0 24 24" width="44" height="44" fill="#666" style="margin: 0 auto 14px; display: block; opacity: 0.6;">
+          <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
+        </svg>
+        <div style="font-weight: 500; font-size: 15px; color: #fff; margin-bottom: 4px;">Arama geçmişiniz henüz boş</div>
+        <div style="font-size: 12px; color: #888;">Yaptığınız aramalar burada kaydedilecektir</div>
       </div>
     `;
     return;
