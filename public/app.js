@@ -14,6 +14,10 @@ let currentPlayingVideo = null;
 let isPlaying = false;
 let queueList = [];
 
+// Ekran kilidi / arka plan geçişini gerçek kullanıcı pause'undan ayırt etmek için
+let _wasPlayingBeforeHide = false;  // Ekran kilitlenmeden önceki oynatma durumu
+let _screenLockPause = false;       // Ekran kilidi kaynaklı pause mi?
+
 // ─── DOM References ────────────────────────────────────────────────────────
 const searchForm = document.getElementById('search-form');
 const searchInput = document.getElementById('search-input');
@@ -860,23 +864,31 @@ window.onYouTubeIframeAPIReady = function() {
         const s = event.data;
         if (s === YT.PlayerState.PLAYING) {
           isPlaying = true;
+          _screenLockPause = false; // Gerçekten oynatılıyor
           updatePlayIcon(true);
           updateMediaSessionState('playing');
           updateMediaSessionPosition();
-          // Arka plan ses oturumunu başlat / ekranı uyandır
           startBackgroundAudioSession();
           requestWakeLock().catch(() => {});
           if (socket && socket.connected) socket.emit('video-play', player.getCurrentTime());
         } else if (s === YT.PlayerState.PAUSED) {
+          // Eğer ekran kilidi kaynaklıysa: isPlaying'i değiştirme, sokete gönderme
+          if (_screenLockPause) {
+            // Kilit ekranı pause — sadece UI güncelle, durum değişmesin
+            updatePlayIcon(false);
+            updateMediaSessionState('paused');
+            // isPlaying TRUE kalsın — kilit açılınca devam ettireceğiz
+            return;
+          }
           isPlaying = false;
           updatePlayIcon(false);
           updateMediaSessionState('paused');
           updateMediaSessionPosition();
-          // Kilit ekranında kullanıcı durdurduğunda WakeLock serbest bırak
           releaseWakeLock();
           if (socket && socket.connected) socket.emit('video-pause', player.getCurrentTime());
         } else if (s === YT.PlayerState.ENDED) {
           isPlaying = false;
+          _screenLockPause = false;
           updatePlayIcon(false);
           updateMediaSessionState('none');
           releaseWakeLock();
@@ -965,112 +977,175 @@ function updatePlayIcon(playing) {
   updateMediaSessionState(playing ? 'playing' : 'paused');
 }
 
-// ─── Media Session API (Lock Screen / Notification Controls) ───────────────
-let mediaSessionPositionInterval = null;
+// ─── Professional Media Session & Background Lock Screen Audio Engine ─────
+let _bgAudioEl = null;
+let _mediaSessionPositionInterval = null;
+let _wakeLock = null;
+
+// Clean 2-Second Silent Stereo WAV PCM Data URI (Universally supported by iOS & Android)
+function _getSilentWavDataUri() {
+  const sampleRate = 8000;
+  const numSamples = sampleRate * 2; // 2 seconds
+  const dataSize = numSamples;
+  const buf = new ArrayBuffer(44 + dataSize);
+  const v = new DataView(buf);
+  const ws = (off, str) => { for (let i = 0; i < str.length; i++) v.setUint8(off + i, str.charCodeAt(i)); };
+  ws(0, 'RIFF'); v.setUint32(4, 36 + dataSize, true);
+  ws(8, 'WAVE'); ws(12, 'fmt ');
+  v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+  v.setUint32(24, sampleRate, true); v.setUint32(28, sampleRate, true);
+  v.setUint16(32, 1, true); v.setUint16(34, 8, true);
+  ws(36, 'data'); v.setUint32(40, dataSize, true);
+  for (let i = 44; i < 44 + dataSize; i++) v.setUint8(i, 128); // 128 = Silence in 8-bit PCM
+  
+  let binary = '';
+  const bytes = new Uint8Array(buf);
+  for (let i = 0; i < bytes.byteLength; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return 'data:audio/wav;base64,' + btoa(binary);
+}
+
+function initBackgroundAudioEngine() {
+  if (_bgAudioEl) return _bgAudioEl;
+  
+  _bgAudioEl = document.getElementById('wp-bg-audio-engine');
+  if (!_bgAudioEl) {
+    _bgAudioEl = document.createElement('audio');
+    _bgAudioEl.id = 'wp-bg-audio-engine';
+    _bgAudioEl.setAttribute('playsinline', '');
+    _bgAudioEl.setAttribute('webkit-playsinline', '');
+    _bgAudioEl.setAttribute('preload', 'auto');
+    _bgAudioEl.loop = true;
+    _bgAudioEl.src = _getSilentWavDataUri();
+    _bgAudioEl.volume = 0.01; // Inaudible carrier to keep mobile media notification alive
+    _bgAudioEl.style.cssText = 'position:fixed; bottom:0; left:0; width:1px; height:1px; opacity:0.01; pointer-events:none; z-index:-1;';
+    document.body.appendChild(_bgAudioEl);
+  }
+  return _bgAudioEl;
+}
+
+function startBackgroundAudioSession() {
+  const el = initBackgroundAudioEngine();
+  if (el && el.paused) {
+    el.play().catch(() => {});
+  }
+}
+
+function stopBackgroundAudioSession() {
+  if (_bgAudioEl && !_bgAudioEl.paused) {
+    _bgAudioEl.pause();
+  }
+}
 
 function setupMediaSession(video) {
   if (!('mediaSession' in navigator) || !video) return;
 
-  const artwork = [
-    { src: video.thumbnail || '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
-    { src: video.thumbnail || '/icons/icon-512.png', sizes: '512x512', type: 'image/png' }
-  ];
+  const title = decodeHtmlEntities(video.title) || 'WatchParty';
+  const artist = decodeHtmlEntities(video.author) || 'YouTube';
+  const thumbUrl = video.thumbnail || `https://i.ytimg.com/vi/${video.id}/hqdefault.jpg`;
 
   try {
     navigator.mediaSession.metadata = new MediaMetadata({
-      title: video.title || 'WatchParty',
-      artist: video.author || 'YouTube',
-      album: 'WatchParty',
-      artwork
+      title: title,
+      artist: artist,
+      album: 'WatchParty Birlikte İzle',
+      artwork: [
+        { src: thumbUrl, sizes: '512x512', type: 'image/jpeg' },
+        { src: thumbUrl, sizes: '256x256', type: 'image/jpeg' },
+        { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' },
+        { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' }
+      ]
     });
-  } catch(e) {}
+  } catch (e) {
+    console.warn('[MediaSession Metadata Error]', e);
+  }
 
-  // Action Handlers — next/previous track via queue
-  navigator.mediaSession.setActionHandler('play', () => {
-    try { if (player && typeof player.playVideo === 'function') player.playVideo(); } catch(_) {}
-    updateMediaSessionState('playing');
-  });
-
-  navigator.mediaSession.setActionHandler('pause', () => {
-    try { if (player && typeof player.pauseVideo === 'function') player.pauseVideo(); } catch(_) {}
-    updateMediaSessionState('paused');
-  });
-
-  navigator.mediaSession.setActionHandler('stop', () => {
-    try { if (player && typeof player.stopVideo === 'function') player.stopVideo(); } catch(_) {}
-    updateMediaSessionState('paused');
-  });
-
-  navigator.mediaSession.setActionHandler('seekbackward', (details) => {
-    try {
-      if (!player || typeof player.getCurrentTime !== 'function') return;
-      const skipTime = details.seekOffset || 10;
-      const newTime = Math.max(0, player.getCurrentTime() - skipTime);
-      player.seekTo(newTime, true);
-      if (socket && socket.connected) socket.emit('video-seek', newTime);
-      updateMediaSessionPosition();
-    } catch(_) {}
-  });
-
-  navigator.mediaSession.setActionHandler('seekforward', (details) => {
-    try {
-      if (!player || typeof player.getCurrentTime !== 'function') return;
-      const skipTime = details.seekOffset || 10;
-      const dur = player.getDuration ? (player.getDuration() || 9999) : 9999;
-      const newTime = Math.min(dur, player.getCurrentTime() + skipTime);
-      player.seekTo(newTime, true);
-      if (socket && socket.connected) socket.emit('video-seek', newTime);
-      updateMediaSessionPosition();
-    } catch(_) {}
-  });
-
-  navigator.mediaSession.setActionHandler('seekto', (details) => {
-    try {
-      if (!player || typeof player.seekTo !== 'function') return;
-      if (details.fastSeek && 'fastSeek' in player) {
-        player.seekTo(details.seekTime, false);
-      } else {
-        player.seekTo(details.seekTime, true);
+  // Register Handlers
+  try {
+    navigator.mediaSession.setActionHandler('play', () => {
+      if (player && typeof player.playVideo === 'function') {
+        try { player.playVideo(); } catch(_) {}
       }
-      if (socket && socket.connected) socket.emit('video-seek', details.seekTime);
-      updateMediaSessionPosition();
-    } catch(_) {}
-  });
-
-  // Next Track — emit socket skip to play next queue item
-  try {
-    navigator.mediaSession.setActionHandler('nexttrack', () => {
-      if (socket && socket.connected) socket.emit('skip');
-      showToast('Sonraki şarkıya geçildi ⏭️');
+      if (socket && socket.connected) socket.emit('video-play', player?.getCurrentTime ? player.getCurrentTime() : 0);
+      startBackgroundAudioSession();
+      updateMediaSessionState('playing');
     });
-  } catch(_) {}
 
-  // Previous Track — restart current or go back (restart within 5s, then previous)
-  try {
+    navigator.mediaSession.setActionHandler('pause', () => {
+      if (player && typeof player.pauseVideo === 'function') {
+        try { player.pauseVideo(); } catch(_) {}
+      }
+      if (socket && socket.connected) socket.emit('video-pause', player?.getCurrentTime ? player.getCurrentTime() : 0);
+      stopBackgroundAudioSession();
+      updateMediaSessionState('paused');
+    });
+
+    navigator.mediaSession.setActionHandler('stop', () => {
+      if (player && typeof player.stopVideo === 'function') {
+        try { player.stopVideo(); } catch(_) {}
+      }
+      stopBackgroundAudioSession();
+      updateMediaSessionState('none');
+    });
+
+    navigator.mediaSession.setActionHandler('nexttrack', () => {
+      if (socket && socket.connected) {
+        socket.emit('skip');
+      }
+      showToast('Sonraki videoya geçildi ⏭️');
+    });
+
     navigator.mediaSession.setActionHandler('previoustrack', () => {
+      if (!player || typeof player.getCurrentTime !== 'function') return;
+      const currentTime = player.getCurrentTime();
+      if (currentTime > 5) {
+        player.seekTo(0, true);
+        if (socket && socket.connected) socket.emit('video-seek', 0);
+        showToast('Başa alındı ⏮️');
+      } else {
+        if (socket && socket.connected) socket.emit('previous-track');
+        showToast('Önceki video ⏮️');
+      }
+      updateMediaSessionPosition();
+    });
+
+    navigator.mediaSession.setActionHandler('seekbackward', (details) => {
       try {
         if (!player || typeof player.getCurrentTime !== 'function') return;
-        const currentTime = player.getCurrentTime();
-        if (currentTime > 5) {
-          player.seekTo(0, true);
-          if (socket && socket.connected) socket.emit('video-seek', 0);
-          showToast('Başa alındı ⏮️');
-        } else {
-          if (socket && socket.connected) socket.emit('previous-track');
-          showToast('Önceki şarkı ⏮️');
-        }
+        const skipTime = details.seekOffset || 10;
+        const newTime = Math.max(0, player.getCurrentTime() - skipTime);
+        player.seekTo(newTime, true);
+        if (socket && socket.connected) socket.emit('video-seek', newTime);
         updateMediaSessionPosition();
       } catch(_) {}
     });
-  } catch(_) {}
 
-  // Start position tracking interval for lock screen seek bar
-  startMediaSessionPositionTracking();
+    navigator.mediaSession.setActionHandler('seekforward', (details) => {
+      try {
+        if (!player || typeof player.getCurrentTime !== 'function') return;
+        const skipTime = details.seekOffset || 10;
+        const dur = player.getDuration ? (player.getDuration() || 9999) : 9999;
+        const newTime = Math.min(dur, player.getCurrentTime() + skipTime);
+        player.seekTo(newTime, true);
+        if (socket && socket.connected) socket.emit('video-seek', newTime);
+        updateMediaSessionPosition();
+      } catch(_) {}
+    });
 
-  // AudioContext keep-alive: ses oturumunu aktif tut (kilit ekranı desteği)
+    navigator.mediaSession.setActionHandler('seekto', (details) => {
+      try {
+        if (!player || typeof player.seekTo !== 'function') return;
+        player.seekTo(details.seekTime, true);
+        if (socket && socket.connected) socket.emit('video-seek', details.seekTime);
+        updateMediaSessionPosition();
+      } catch(_) {}
+    });
+  } catch(e) {}
+
+  updateMediaSessionState('playing');
   startBackgroundAudioSession();
-
-  // WakeLock: Oynatma sırasında ekran kararmasını engelle
+  startMediaSessionPositionTracking();
   requestWakeLock().catch(() => {});
 }
 
@@ -1099,81 +1174,20 @@ function updateMediaSessionPosition() {
 }
 
 function startMediaSessionPositionTracking() {
-  if (mediaSessionPositionInterval) clearInterval(mediaSessionPositionInterval);
-  mediaSessionPositionInterval = setInterval(() => {
+  if (_mediaSessionPositionInterval) clearInterval(_mediaSessionPositionInterval);
+  _mediaSessionPositionInterval = setInterval(() => {
     if (isPlaying && player && playerReady) {
       updateMediaSessionPosition();
     }
   }, 1000);
 }
 
-// ─── Background Audio Keep-Alive (Prevents browser from suspending YouTube iframe) ─
-// Tarayıcı ses oturumu aktif olduğu sürece ekran kilitlense bile YouTube oynatmayı sürdürür.
-// Spotify, YouTube Music ve tüm profesyonel oynatıcılar bu tekniği kullanır.
-let _bgAudioCtx = null;
-let _bgGainNode = null;
-let _bgOscillator = null;
-let _bgKeepAliveInterval = null;
-let _wakeLock = null;
-
-function startBackgroundAudioSession() {
-  // Zaten çalışıyorsa tekrar başlatma
-  if (_bgAudioCtx && _bgAudioCtx.state === 'running') return;
-
-  try {
-    _bgAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
-
-    // Gain 0.0001 — insan kulağının duyamayacağı kadar sessiz ama ses oturumu aktif
-    _bgGainNode = _bgAudioCtx.createGain();
-    _bgGainNode.gain.value = 0.0001;
-    _bgGainNode.connect(_bgAudioCtx.destination);
-
-    // Sabit 40Hz osilatör (bas frekansı, tamamen sessiz görünür)
-    _bgOscillator = _bgAudioCtx.createOscillator();
-    _bgOscillator.frequency.value = 40;
-    _bgOscillator.type = 'sine';
-    _bgOscillator.connect(_bgGainNode);
-    _bgOscillator.start();
-
-    console.log('[WatchParty] Arka plan ses oturumu başlatıldı — kilit ekranı desteği aktif');
-  } catch (e) {
-    console.warn('[WatchParty] AudioContext başlatılamadı:', e);
-  }
-
-  // AudioContext suspended olursa yeniden resume et (iOS Safari için kritik)
-  if (_bgKeepAliveInterval) clearInterval(_bgKeepAliveInterval);
-  _bgKeepAliveInterval = setInterval(() => {
-    if (_bgAudioCtx && _bgAudioCtx.state === 'suspended') {
-      _bgAudioCtx.resume().catch(() => {});
-    }
-  }, 2000);
-}
-
-function stopBackgroundAudioSession() {
-  try {
-    if (_bgOscillator) { _bgOscillator.stop(); _bgOscillator.disconnect(); }
-    if (_bgGainNode) _bgGainNode.disconnect();
-    if (_bgAudioCtx) _bgAudioCtx.close();
-  } catch (_) {}
-  _bgOscillator = null;
-  _bgGainNode = null;
-  _bgAudioCtx = null;
-  if (_bgKeepAliveInterval) clearInterval(_bgKeepAliveInterval);
-  _bgKeepAliveInterval = null;
-}
-
-// ─── Wake Lock API (Ekranın kararmasını engelle — opsiyonel) ─────────────────
+// ─── Wake Lock API (Screen Dim Prevention) ──────────────────────────────────
 async function requestWakeLock() {
   if (!('wakeLock' in navigator)) return;
   try {
     _wakeLock = await navigator.wakeLock.request('screen');
-    _wakeLock.addEventListener('release', () => {
-      console.log('[WatchParty] WakeLock serbest bırakıldı');
-    });
-    console.log('[WatchParty] WakeLock aktif — ekran kararma engellendi');
-  } catch (e) {
-    // Kilit ekranında WakeLock geri alınır, bu normaldir
-  }
+  } catch (_) {}
 }
 
 async function releaseWakeLock() {
@@ -1183,29 +1197,30 @@ async function releaseWakeLock() {
   }
 }
 
-// ─── Visibility Change — Ekran kilidi açıldığında oynatmayı devam ettir ──────
+// ─── Visibility Change Handler ─────────────────────────────────────────────
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible') {
-    // Sayfa tekrar görünür oldu — AudioContext'i yeniden etkinleştir
-    if (_bgAudioCtx && _bgAudioCtx.state === 'suspended') {
-      _bgAudioCtx.resume().catch(() => {});
+  if (document.visibilityState === 'hidden') {
+    _wasPlayingBeforeHide = isPlaying;
+    if (isPlaying) {
+      _screenLockPause = true;
+      // Ensure carrier audio keeps playing so lock-screen notification remains alive
+      startBackgroundAudioSession();
     }
-    // YouTube player askıya alındıysa devam ettir
-    if (isPlaying && player && playerReady) {
-      try {
-        const state = player.getPlayerState ? player.getPlayerState() : -1;
-        // 2 = PAUSED durumu — eğer biz pause yapmadıysak ama sistem duraklattıysa devam et
-        if (state === 2) {
-          setTimeout(() => {
-            try {
-              player.playVideo();
-              updateMediaSessionState('playing');
-            } catch (_) {}
-          }, 300);
-        }
-      } catch (_) {}
+  } else {
+    _screenLockPause = false;
+    if (_wasPlayingBeforeHide && player && playerReady) {
+      isPlaying = true;
+      updateMediaSessionState('playing');
+      setTimeout(() => {
+        try {
+          if (player && typeof player.playVideo === 'function') {
+            player.playVideo();
+            updateMediaSessionPosition();
+          }
+        } catch (_) {}
+      }, 300);
     }
-    // WakeLock'u yeniden iste
+    _wasPlayingBeforeHide = false;
     if (isPlaying) requestWakeLock().catch(() => {});
   }
 });

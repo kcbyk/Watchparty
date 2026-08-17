@@ -818,6 +818,24 @@ io.on('connection', (socket) => {
     playNext(roomId);
   });
 
+  socket.on('previous-track', () => {
+    if (!roomId) return;
+    const r = rooms.get(roomId);
+    if (!r || !r.history || r.history.length === 0) return;
+    
+    // Geçerli videoyu tekrar sıranın başına koy
+    if (r.currentVideo) {
+      r.queue.unshift(r.currentVideo);
+    }
+    
+    // Geçmişteki son videoyu al
+    r.currentVideo = r.history.pop();
+    r.videoState = { playing: true, time: 0, updatedAt: Date.now() };
+    persistRoom(roomId);
+    io.to(roomId).emit('video-changed', r.currentVideo);
+    io.to(roomId).emit('queue-updated', r.queue);
+  });
+
   socket.on('request-sync', () => {
     if (!roomId) return;
     const r = rooms.get(roomId);
@@ -914,6 +932,12 @@ io.on('connection', (socket) => {
 function playNext(roomId) {
   const r = rooms.get(roomId);
   if (!r) return;
+
+  if (!r.history) r.history = [];
+  if (r.currentVideo) {
+    r.history.push(r.currentVideo);
+    if (r.history.length > 50) r.history.shift();
+  }
 
   if (r.queue.length === 0) {
     r.currentVideo = null;
