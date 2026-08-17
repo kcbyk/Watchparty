@@ -2568,3 +2568,83 @@ svg {
   height: 30px;
   flex-shrink: 0;
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   Pull-To-Refresh Floating Pill & Indicator
+   ═══════════════════════════════════════════════════════════════════ */
+.pull-to-refresh-container {
+  position: fixed;
+  top: var(--yt-header-height, 56px);
+  left: 50%;
+  transform: translateX(-50%) translateY(-80px);
+  z-index: 9999;
+  pointer-events: none;
+  transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.2s ease;
+  opacity: 0;
+  display: flex;
+  justify-content: center;
+}
+
+.pull-to-refresh-container.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.pull-to-refresh-container.refreshing {
+  transform: translateX(-50%) translateY(16px) !important;
+  opacity: 1;
+}
+
+.ptr-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 18px;
+  background: rgba(33, 33, 33, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 30px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+
+.ptr-pill:hover,
+.ptr-pill:active {
+  background: rgba(45, 45, 45, 0.98);
+  transform: scale(1.03);
+}
+
+.ptr-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  color: #ff3333;
+  transition: transform 0.15s ease;
+}
+
+.ptr-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.ptr-icon.spinning {
+  animation: ptr-spin 0.75s linear infinite !important;
+}
+
+@keyframes ptr-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.ptr-text {
+  letter-spacing: 0.2px;
+  white-space: nowrap;
+}

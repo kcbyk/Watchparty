@@ -2524,6 +2524,173 @@ window.addEventListener('keydown', (e) => {
   }
 });
 
+// ─── Pull-To-Refresh (Üst Bardan Aşağı Çekerek Yenileme) ────────────────────
+const ptrContainer = document.getElementById('pull-to-refresh-container');
+const ptrPill = document.getElementById('ptr-pill');
+const ptrIcon = document.getElementById('ptr-icon');
+const ptrText = document.getElementById('ptr-text');
+
+let ptrStartY = 0;
+let ptrCurrentY = 0;
+let isPtrDragging = false;
+let isPtrRefreshing = false;
+
+function isAtPageTop() {
+  const windowTop = window.scrollY <= 2;
+  const gridTop = !videoGridScroll || videoGridScroll.scrollTop <= 2;
+  return windowTop && gridTop;
+}
+
+function triggerPullRefresh() {
+  if (isPtrRefreshing) return;
+  isPtrRefreshing = true;
+  if (ptrContainer) ptrContainer.classList.add('refreshing', 'visible');
+  if (ptrIcon) ptrIcon.classList.add('spinning');
+  if (ptrText) ptrText.textContent = 'Yenileniyor...';
+  try { navigator.vibrate?.(30); } catch (_) {}
+
+  // Feed ekranındaysa içeriği sıfırdan çek, video/oda ekranındaysa odayı eşitle
+  if (feedView && feedView.classList.contains('active')) {
+    const activeChip = document.querySelector('.chip-item.active');
+    const query = activeChip?.getAttribute('data-q') || currentFeedQuery || 'trend popüler türkiye';
+    fetchAndRenderFeed(query, true)
+      .finally(() => {
+        setTimeout(() => {
+          if (ptrContainer) {
+            ptrContainer.classList.remove('refreshing', 'visible');
+            ptrContainer.style.transform = '';
+          }
+          if (ptrIcon) {
+            ptrIcon.classList.remove('spinning');
+            ptrIcon.style.transform = '';
+          }
+          if (ptrText) ptrText.textContent = 'Yenilemek için çekin';
+          isPtrRefreshing = false;
+          showToast('Sayfa yenilendi 🔄');
+        }, 500);
+      });
+  } else {
+    // İzleme / Oda sayfasındaysa anlık senkronizasyon yap veya yenile
+    if (socket && socket.connected) {
+      socket.emit('request-sync');
+    }
+    setTimeout(() => {
+      window.location.reload();
+    }, 400);
+  }
+}
+
+// Butona tıklandığında da doğrudan yenile
+if (ptrPill) {
+  ptrPill.addEventListener('click', triggerPullRefresh);
+}
+
+// Dokunmatik / Touch Desteği (Mobil & PWA)
+window.addEventListener('touchstart', (e) => {
+  if (isPtrRefreshing) return;
+  if (isAtPageTop()) {
+    ptrStartY = e.touches[0].clientY;
+    isPtrDragging = true;
+  }
+}, { passive: true });
+
+window.addEventListener('touchmove', (e) => {
+  if (!isPtrDragging || isPtrRefreshing) return;
+  if (!isAtPageTop()) {
+    isPtrDragging = false;
+    if (ptrContainer) ptrContainer.classList.remove('visible');
+    return;
+  }
+
+  ptrCurrentY = e.touches[0].clientY;
+  const deltaY = ptrCurrentY - ptrStartY;
+
+  if (deltaY > 15) {
+    const pullDist = Math.min(75, deltaY * 0.45);
+    if (ptrContainer) {
+      ptrContainer.classList.add('visible');
+      ptrContainer.style.transform = `translateX(-50%) translateY(${-80 + pullDist * 1.3}px)`;
+    }
+    if (ptrIcon) {
+      ptrIcon.style.transform = `rotate(${pullDist * 5}deg)`;
+    }
+    if (ptrText) {
+      ptrText.textContent = pullDist >= 48 ? 'Bırakınca yenilenecek' : 'Yenilemek için çekin';
+    }
+  }
+}, { passive: true });
+
+window.addEventListener('touchend', () => {
+  if (!isPtrDragging || isPtrRefreshing) return;
+  isPtrDragging = false;
+
+  const deltaY = ptrCurrentY - ptrStartY;
+  const pullDist = Math.min(75, deltaY * 0.45);
+
+  if (pullDist >= 48) {
+    triggerPullRefresh();
+  } else {
+    if (ptrContainer) {
+      ptrContainer.classList.remove('visible');
+      ptrContainer.style.transform = '';
+    }
+    if (ptrIcon) ptrIcon.style.transform = '';
+  }
+  ptrStartY = 0;
+  ptrCurrentY = 0;
+});
+
+// Masaüstü / Mouse Pointer Desteği (Header'dan aşağı çekince)
+const ytHeader = document.querySelector('.yt-header');
+if (ytHeader) {
+  ytHeader.addEventListener('pointerdown', (e) => {
+    if (e.target.closest('button, input, a, form')) return;
+    if (isAtPageTop() && !isPtrRefreshing) {
+      ptrStartY = e.clientY;
+      isPtrDragging = true;
+    }
+  });
+
+  window.addEventListener('pointermove', (e) => {
+    if (!isPtrDragging || isPtrRefreshing) return;
+    ptrCurrentY = e.clientY;
+    const deltaY = ptrCurrentY - ptrStartY;
+
+    if (deltaY > 15) {
+      const pullDist = Math.min(75, deltaY * 0.4);
+      if (ptrContainer) {
+        ptrContainer.classList.add('visible');
+        ptrContainer.style.transform = `translateX(-50%) translateY(${-80 + pullDist * 1.3}px)`;
+      }
+      if (ptrIcon) {
+        ptrIcon.style.transform = `rotate(${pullDist * 5}deg)`;
+      }
+      if (ptrText) {
+        ptrText.textContent = pullDist >= 45 ? 'Bırakınca yenilenecek' : 'Yenilemek için çekin';
+      }
+    }
+  });
+
+  window.addEventListener('pointerup', () => {
+    if (!isPtrDragging || isPtrRefreshing) return;
+    isPtrDragging = false;
+    const deltaY = ptrCurrentY - ptrStartY;
+    const pullDist = Math.min(75, deltaY * 0.4);
+
+    if (pullDist >= 45) {
+      triggerPullRefresh();
+    } else {
+      if (ptrContainer) {
+        ptrContainer.classList.remove('visible');
+        ptrContainer.style.transform = '';
+      }
+      if (ptrIcon) ptrIcon.style.transform = '';
+    }
+    ptrStartY = 0;
+    ptrCurrentY = 0;
+  });
+}
+
 // ─── PWA Service Worker Registration ───────────────────────────────────────
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
@@ -2536,3 +2703,4 @@ if ('serviceWorker' in navigator) {
       });
   });
 }
+
