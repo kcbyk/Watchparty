@@ -398,13 +398,19 @@ const defaultKeys = [
 ];
 
 let envKeys = [];
+// 1. Destek: Virgülle ayrılmış anahtarlar (Örn: KEY1,KEY2,KEY3)
 if (process.env.YOUTUBE_API_KEY) {
   envKeys.push(...process.env.YOUTUBE_API_KEY.split(',').map(k => k.trim()).filter(Boolean));
 }
-if (process.env.YOUTUBE_API_KEY_2) {
-  envKeys.push(process.env.YOUTUBE_API_KEY_2.trim());
+// 2. Destek: Numaralandırılmış değişkenler (YOUTUBE_API_KEY_2, YOUTUBE_API_KEY_3 vb.)
+for (let i = 2; i <= 10; i++) {
+  const k = process.env[`YOUTUBE_API_KEY_${i}`];
+  if (k && k.trim()) {
+    envKeys.push(k.trim());
+  }
 }
 
+// Env anahtarları varsa onları kullan, yoksa dahili anahtarları kullan
 const YOUTUBE_API_KEYS = envKeys.length > 0 ? envKeys : defaultKeys;
 let currentApiKeyIndex = 0;
 
