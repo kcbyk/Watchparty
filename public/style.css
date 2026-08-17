@@ -2087,19 +2087,6 @@ svg {
 @media (max-width: 860px) {
   /* Header */
   .yt-header {
-    height: 48px;
-    padding: 0 12px;
-  }
-  #sidebar-toggle-btn {
-    display: none;
-  }
-  .yt-logo-svg text {
-    font-size: 15px;
-  }
-/* ─── Media Query for Tablets & Mobile Screens (<= 860px) ─────────────────── */
-@media (max-width: 860px) {
-  /* Header */
-  .yt-header {
     height: 48px !important;
     padding: 0 12px !important;
     display: flex !important;
@@ -2279,12 +2266,66 @@ svg {
   .watch-channel-row {
     flex-direction: column !important;
     align-items: flex-start !important;
-    gap: 10px !important;
+    gap: 12px !important;
     margin-top: 8px !important;
+    margin-bottom: 12px !important;
   }
   .watch-channel-left {
     width: 100% !important;
-    justify-content: space-between !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    gap: 12px !important;
+  }
+  .watch-channel-avatar {
+    width: 38px !important;
+    height: 38px !important;
+    min-width: 38px !important;
+    border-radius: 50% !important;
+    flex-shrink: 0 !important;
+  }
+  .watch-channel-info {
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    align-items: flex-start !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+    flex-shrink: 1 !important;
+  }
+  .watch-channel-name-wrap {
+    display: flex !important;
+    align-items: center !important;
+    gap: 4px !important;
+  }
+  .watch-channel-name {
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    color: var(--yt-text-primary) !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    line-height: 1.2 !important;
+  }
+  .verified-icon {
+    width: 13px !important;
+    height: 13px !important;
+    flex-shrink: 0 !important;
+  }
+  .watch-sub-count {
+    font-size: 11px !important;
+    color: var(--yt-text-secondary) !important;
+    line-height: 1.2 !important;
+    margin-top: 2px !important;
+  }
+  .watch-subscribe-btn {
+    margin-left: auto !important;
+    margin-right: 0 !important;
+    height: 34px !important;
+    padding: 0 14px !important;
+    font-size: 13px !important;
+    border-radius: 17px !important;
+    flex-shrink: 0 !important;
   }
   .watch-actions-right {
     width: 100% !important;

@@ -367,14 +367,25 @@ const watchDownloadBtn = document.getElementById('watch-download-btn');
 let relatedVideosCache = [];
 let currentWatchSidebarTab = 'related'; // 'related' | 'queue'
 
+function decodeHtmlEntities(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&amp;/g, '&')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&apos;/g, "'")
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>');
+}
+
 function openWatchView(video) {
   if (!video) return;
   feedView.classList.remove('active');
   watchView.classList.add('active');
   window.scrollTo({ top: 0, behavior: 'smooth' });
 
-  watchTitle.textContent = video.title || 'Video';
-  watchChannelName.textContent = video.author || 'YouTube';
+  watchTitle.textContent = decodeHtmlEntities(video.title) || 'Video';
+  watchChannelName.textContent = decodeHtmlEntities(video.author) || 'YouTube';
 
   const subCountEl = document.querySelector('.watch-sub-count');
   if (subCountEl) {
@@ -1503,7 +1514,7 @@ async function openDownloadModal(video) {
   downloadOptions.style.display = 'none';
   downloadError.style.display = 'none';
   downloadThumb.src = video.thumbnail || `https://i.ytimg.com/vi/${video.id}/hqdefault.jpg`;
-  downloadTitle.textContent = video.title || 'Video';
+  downloadTitle.textContent = decodeHtmlEntities(video.title) || 'Video';
   downloadModal.classList.add('active');
 
   try {
@@ -1517,14 +1528,16 @@ async function openDownloadModal(video) {
       return;
     }
 
-    // MP3 kartı — tıklanınca indir
+    // MP3 kartı — tıklanınca anında indir
     if (downloadMp3Btn) {
-      if (downloadMp3Size) downloadMp3Size.textContent = data.mp3?.size ? formatFileSize(data.mp3.size) : 'Ses kalitesi: yüksek';
+      if (downloadMp3Size) downloadMp3Size.textContent = data.mp3?.size ? formatFileSize(data.mp3.size) : 'Ses kalitesi: yüksek (320kbps)';
       downloadMp3Btn.onclick = () => {
+        const cleanName = `${(decodeHtmlEntities(data.title || video.title || 'sarki')).replace(/[/\\?%*:|"<>]/g, '').trim()}.mp3`;
         if (data.mp3?.url) {
-          triggerProxyDownload(data.mp3.url, `${(data.title||video.title||'audio').replace(/[^\w\s-]/g,'').trim()}.mp3`);
+          triggerProxyDownload(data.mp3.url, cleanName);
         } else {
-          showToast('MP3 linki alınamadı');
+          // Doğrudan backend ses çözücü endpoint'ine bağlan
+          triggerProxyDownload(`/api/download-audio/${video.id}?title=${encodeURIComponent(cleanName)}`, cleanName);
         }
       };
     }
@@ -1538,23 +1551,40 @@ async function openDownloadModal(video) {
   }
 }
 
-// API + proxy ile direkt indir
+// API + proxy ile sayfadan ayrılmadan doğrudan indir
 function triggerProxyDownload(url, filename) {
-  showToast('İndirme başladı ⬇️');
-  downloadModal.classList.remove('active');
-  // window.location.href ile tarayıcı dosyayı indirir
-  window.location.href = `/api/proxy-download?url=${encodeURIComponent(url)}&filename=${encodeURIComponent(filename)}`;
+  showToast('Şarkı indiriliyor... ⬇️');
+  if (downloadModal) downloadModal.classList.remove('active');
+
+  const safeFilename = filename || 'sarki.mp3';
+  const downloadUrl = url.startsWith('/') 
+    ? url 
+    : `/api/proxy-download?url=${encodeURIComponent(url)}&filename=${encodeURIComponent(safeFilename)}`;
+
+  // Gizli <a> etiketi tıklaması ile tarayıcı arka planda indirmeyi başlatır, sayfa bembeyaz olmaz!
+  const a = document.createElement('a');
+  a.href = downloadUrl;
+  a.download = safeFilename;
+  a.style.display = 'none';
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => {
+    if (a.parentNode) a.parentNode.removeChild(a);
+  }, 2000);
 }
 
-function triggerDownload(url, filename, isDirectLink) {
+function triggerDownload(url, filename) {
   showToast('İndirme başladı ⬇️');
-  downloadModal.classList.remove('active');
+  if (downloadModal) downloadModal.classList.remove('active');
   const a = document.createElement('a');
   a.href = url;
   a.download = filename;
+  a.style.display = 'none';
   document.body.appendChild(a);
   a.click();
-  document.body.removeChild(a);
+  setTimeout(() => {
+    if (a.parentNode) a.parentNode.removeChild(a);
+  }, 2000);
 }
 
 if (downloadModalClose) {

@@ -5,3 +5,4 @@ watchparty.sqlite-wal
 watchparty.sqlite-shm
 .DS_Store
 *.log
+*.mp3
